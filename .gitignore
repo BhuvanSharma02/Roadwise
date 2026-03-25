@@ -1,0 +1,15 @@
+# RoadWise Git Ignore
+GEMINI.md
+
+# Gradle
+.gradle/
+build/
+
+# Android Studio
+.idea/
+*.iml
+local.properties
+.DS_Store
+captures/
+.externalNativeBuild
+.cxx
