@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="glassSurface" format="color" />
+    <attr name="glassSurfaceDeep" format="color" />
+    <attr name="glassBorder" format="color" />
+    <attr name="textFaded" format="color" />
+</resources>

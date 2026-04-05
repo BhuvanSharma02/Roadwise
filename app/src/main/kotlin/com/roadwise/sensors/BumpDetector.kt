@@ -15,7 +15,8 @@ class BumpDetector(context: Context, private val onFeatureDetected: (RoadFeature
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-    private val THRESHOLD = 3.8f 
+    private var threshold = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
+        .getFloat("pref_sensor_threshold", 3.8f)
     private var lastZ = 0.0f
     
     // Signature Tracking
@@ -25,12 +26,17 @@ class BumpDetector(context: Context, private val onFeatureDetected: (RoadFeature
 
     fun start() {
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
 
     fun stop() {
         sensorManager.unregisterListener(this)
+    }
+
+    fun updateThreshold(context: Context) {
+        threshold = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
+            .getFloat("pref_sensor_threshold", 3.8f)
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -44,11 +50,11 @@ class BumpDetector(context: Context, private val onFeatureDetected: (RoadFeature
                 // State Machine Logic
                 if (pendingFeature == RoadFeature.UNKNOWN) {
                     // Step 1: Detect the START of a movement
-                    if (deltaZ > THRESHOLD) {
+                    if (deltaZ > threshold) {
                         // Rising -> Potential Speed Bump
                         pendingFeature = RoadFeature.SPEED_BUMP
                         pendingTimestamp = currentTime
-                    } else if (deltaZ < -THRESHOLD) {
+                    } else if (deltaZ < -threshold) {
                         // Falling -> Potential Pothole
                         pendingFeature = RoadFeature.POTHOLE
                         pendingTimestamp = currentTime
@@ -61,11 +67,11 @@ class BumpDetector(context: Context, private val onFeatureDetected: (RoadFeature
                         // Timeout: It was just a single jolt, not a hump/hole
                         pendingFeature = RoadFeature.UNKNOWN
                     } else {
-                        if (pendingFeature == RoadFeature.SPEED_BUMP && deltaZ < -THRESHOLD) {
+                        if (pendingFeature == RoadFeature.SPEED_BUMP && deltaZ < -threshold) {
                             // Up then Down! Signature for Speed Bump confirmed.
                             onFeatureDetected(RoadFeature.SPEED_BUMP, deltaZ)
                             pendingFeature = RoadFeature.UNKNOWN
-                        } else if (pendingFeature == RoadFeature.POTHOLE && deltaZ > THRESHOLD) {
+                        } else if (pendingFeature == RoadFeature.POTHOLE && deltaZ > threshold) {
                             // Down then Up! Signature for Pothole confirmed.
                             onFeatureDetected(RoadFeature.POTHOLE, deltaZ)
                             pendingFeature = RoadFeature.UNKNOWN

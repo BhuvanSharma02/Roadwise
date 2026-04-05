@@ -1,0 +1,23 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.RoadWise" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_teal</item>
+        <item name="colorPrimaryVariant">@color/brand_teal</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/brand_amber</item>
+        <item name="colorSecondaryVariant">@color/brand_amber_dark</item>
+        <item name="colorOnSecondary">@color/black</item>
+        
+        <item name="android:colorBackground">@color/obsidian_background</item>
+        <item name="colorSurface">@color/obsidian_surface</item>
+        <item name="colorOnBackground">@color/text_high_emphasis_dark</item>
+        <item name="colorOnSurface">@color/text_high_emphasis_dark</item>
+
+        <item name="glassSurface">@color/obsidian_surface_glass</item>
+        <item name="glassSurfaceDeep">@color/obsidian_surface_glass_deep</item>
+        <item name="glassBorder">@color/glass_border_dark</item>
+        <item name="textFaded">@color/text_med_emphasis_dark</item>
+
+        <item name="android:statusBarColor">@color/obsidian_background</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+    </style>
+</resources>
