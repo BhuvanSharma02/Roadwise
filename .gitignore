@@ -13,3 +13,7 @@ local.properties
 captures/
 .externalNativeBuild
 .cxx
+<<<<<<< HEAD
+=======
+app/google-services.json
+>>>>>>> contributor-fork/main

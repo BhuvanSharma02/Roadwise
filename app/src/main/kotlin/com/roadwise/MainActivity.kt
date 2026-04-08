@@ -1,6 +1,7 @@
 package com.roadwise
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,23 +10,21 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
-import com.roadwise.camera.PotholeAnalyzer
 import com.roadwise.databinding.ActivityMainBinding
 import com.roadwise.models.PotholeData
 import com.roadwise.sensors.BumpDetector
 import com.roadwise.sensors.RoadFeature
 import com.roadwise.utils.DetectionManager
 import com.roadwise.utils.PotholeRepository
-import com.roadwise.utils.ImageAnalyzer
+import com.roadwise.utils.SessionManager
+import com.roadwise.utils.Severity
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -33,10 +32,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-import java.io.File
-import java.io.FileOutputStream
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.*
 import androidx.lifecycle.lifecycleScope
 import com.roadwise.mapping.AdaptiveRoadOverlay
 import com.roadwise.routing.RoutingManager
@@ -47,14 +43,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.UUID
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Polyline
 import android.text.Editable
 import android.text.TextWatcher
 import android.widget.ArrayAdapter
-import android.widget.ImageButton
 import android.view.View
 import android.animation.ValueAnimator
 import org.osmdroid.events.MapListener
@@ -64,169 +58,272 @@ import org.osmdroid.events.ZoomEvent
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var cameraExecutor: ExecutorService
     private lateinit var bumpDetector: BumpDetector
     private lateinit var map: MapView
     private lateinit var locationOverlay: MyLocationNewOverlay
     private lateinit var detectionManager: DetectionManager
     private lateinit var routingManager: RoutingManager
-    private var activeRoute: Polyline? = null
     private var destinationMarker: Marker? = null
     private var verifiedPotholeCount = 0
     private var maxSpeedKmh = 0
-    private var isCameraActive = true
     private var searchJob: Job? = null
     private var searchResults: List<PhotonFeature> = emptyList()
     private lateinit var adaptiveOverlay: AdaptiveRoadOverlay
     private val routeOverlays = mutableListOf<Polyline>()
 
+    // ActivityResultLauncher for LoginActivity result
+    private val loginLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            updateNavForRole()
+            val name = SessionManager.getUserName(this)
+            Toast.makeText(this, "Welcome, $name!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val ctx = applicationContext
-        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
-        Configuration.getInstance().userAgentValue = packageName
+        try {
+            val ctx = applicationContext
+            Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx))
+            Configuration.getInstance().userAgentValue = packageName
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+            binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding.root)
 
-        // Persistent State: Load existing detections and populate map
-        val allDetections = PotholeRepository.getAllPotholes(this)
-        verifiedPotholeCount = allDetections.count { it.type == RoadFeature.POTHOLE }
-        binding.potholeCount.text = verifiedPotholeCount.toString()
+            // ONE-TIME RESET
+            val prefs = getSharedPreferences("roadwise_internal", Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("v2_data_reset", false)) {
+                PotholeRepository.clearAll(this)
+                prefs.edit().putBoolean("v2_data_reset", true).apply()
+            }
 
-        detectionManager = DetectionManager { type, intensity, bitmaps ->
-            val currentLocation = locationOverlay.myLocation
-            // Guard: only save if GPS has a valid fix (non-null and not at 0,0)
-            if (currentLocation != null && currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0) {
-                val imagePaths = mutableListOf<String>()
-                
-                val bestBitmap = ImageAnalyzer.getClearestBitmap(bitmaps)
-                if (bestBitmap != null) {
-                    saveBitmapToDisk(bestBitmap)?.let { imagePaths.add(it) }
+            val allDetections = try {
+                PotholeRepository.getAllPotholes(this)
+            } catch (e: Exception) {
+                Log.e("RoadWise", "Failed to load history", e)
+                emptyList()
+            }
+
+            verifiedPotholeCount = allDetections.count { it.type == RoadFeature.POTHOLE }
+            binding.potholeCount.text = verifiedPotholeCount.toString()
+
+            detectionManager = DetectionManager { type, severity, intensity ->
+                val loc = locationOverlay.myLocation
+                    ?: locationOverlay.myLocationProvider?.lastKnownLocation?.let { GeoPoint(it) }
+
+                if (loc != null && loc.latitude != 0.0) {
+                    val data = PotholeData(loc, type, intensity, severity, System.currentTimeMillis(), emptyList())
+                    PotholeRepository.savePothole(this, data)
+                    runOnUiThread {
+                        addHeatmapPoint(data)
+                        adaptiveOverlay.refresh()
+                        map.controller.animateTo(loc)
+                        val severityLabel = severity.name
+                        if (type == RoadFeature.POTHOLE) {
+                            verifiedPotholeCount++
+                            binding.potholeCount.text = verifiedPotholeCount.toString()
+                            Toast.makeText(this, "⚠️ $severityLabel POTHOLE DETECTED!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this, "🏁 $severityLabel SPEED BUMP", Toast.LENGTH_SHORT).show()
+                        }
+                        map.invalidate()
+                    }
+                } else {
+                    Log.e("RoadWise", "Detection ignored: No GPS fix")
                 }
-                
-                val data = PotholeData(currentLocation, type, intensity, System.currentTimeMillis(), imagePaths)
-                PotholeRepository.savePothole(this, data)
+            }
+
+            map = binding.map
+            map.setTileSource(TileSourceFactory.MAPNIK)
+            map.setMultiTouchControls(true)
+            map.controller.setZoom(19.0)
+            map.controller.setCenter(GeoPoint(20.5937, 78.9629))
+
+            locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(this), map)
+            locationOverlay.enableMyLocation()
+            locationOverlay.enableFollowLocation()
+            map.overlays.add(locationOverlay)
+
+            initAdaptiveOverlay()
+            routingManager = RoutingManager()
+            setupMapGestures()
+
+            allDetections.forEach { addHeatmapPoint(it) }
+
+            PotholeRepository.fetchFromCloud(this) { combinedList ->
                 runOnUiThread {
-                    addHeatmapPoint(data)
+                    map.overlays.removeAll { it is Marker && it != locationOverlay && it != destinationMarker }
+                    combinedList.forEach { addHeatmapPoint(it) }
                     adaptiveOverlay.refresh()
                     map.invalidate()
-                    if (type == RoadFeature.POTHOLE) {
-                        verifiedPotholeCount++
-                        binding.potholeCount.text = verifiedPotholeCount.toString()
-                        Toast.makeText(this, "⚠️ POTHOLE VERIFIED!", Toast.LENGTH_SHORT).show()
-                    } else if (type == RoadFeature.SPEED_BUMP) {
-                        Toast.makeText(this, "🏁 SPEED BUMP", Toast.LENGTH_SHORT).show()
-                    }
                 }
             }
-        }
 
-        map = binding.map
-        map.setTileSource(TileSourceFactory.MAPNIK)
-        map.setMultiTouchControls(true)
-        map.controller.setZoom(19.0)
-        map.controller.setCenter(GeoPoint(20.5937, 78.9629))
+            lifecycleScope.launch {
+                while (isActive) {
+                    val speedMs = locationOverlay.myLocationProvider?.lastKnownLocation?.speed ?: 0f
+                    val speedKmh = (speedMs * 3.6).toInt()
+                    if (speedKmh > maxSpeedKmh) maxSpeedKmh = speedKmh
+                    withContext(Dispatchers.Main) {
+                        if (speedKmh < 15) {
+                            binding.qualityValue.text = "STOPPED (<15KM/H)"
+                            binding.qualityValue.setTextColor(Color.GRAY)
+                        } else {
+                            binding.qualityValue.text = "MONITORING ACTIVE"
+                            binding.qualityValue.setTextColor(Color.parseColor("#10B981"))
+                        }
+                        binding.speedValue.text = "$speedKmh km/h"
+                    }
+                    delay(1000)
+                }
+            }
 
-        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(this), map)
-        locationOverlay.enableMyLocation()
-        locationOverlay.enableFollowLocation()
-        map.overlays.add(locationOverlay)
+            binding.speedValue.setOnLongClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("Session Highlights")
+                    .setMessage("Top Speed Today: $maxSpeedKmh km/h")
+                    .setPositiveButton("Close", null)
+                    .show()
+                true
+            }
 
-        initAdaptiveOverlay()
-
-        routingManager = RoutingManager()
-        setupMapGestures()
-
-        // Load heatmap points for existing detections
-        allDetections.forEach { addHeatmapPoint(it) }
-
-        // Speed updater coroutine - lifecycle-safe, respects battery saver setting
-        lifecycleScope.launch {
-            while (isActive) {
-                val batterySaver = getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
-                    .getBoolean("pref_battery_saver", false)
+            bumpDetector = BumpDetector(this, {
                 val speedMs = locationOverlay.myLocationProvider?.lastKnownLocation?.speed ?: 0f
-                val speedKmh = (speedMs * 3.6).toInt()
-                if (speedKmh > maxSpeedKmh) maxSpeedKmh = speedKmh
-                binding.speedValue.text = "$speedKmh km/h"
-                delay(if (batterySaver) 2000L else 1000L)
+                (speedMs * 3.6).toInt()
+            }) { type, intensity ->
+                detectionManager.onSensorDetection(type, intensity)
             }
-        }
+            bumpDetector.start()
 
-        binding.speedValue.setOnLongClickListener {
-            androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Session Highlights")
-                .setMessage("Top Speed Today: $maxSpeedKmh km/h")
-                .setPositiveButton("Close", null)
-                .show()
-            true
-        }
-
-        bumpDetector = BumpDetector(this) { type, intensity ->
-            detectionManager.onSensorDetection(type, intensity)
-        }
-        bumpDetector.start()
-
-        if (allPermissionsGranted()) startCamera()
-        else ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, 10)
-
-        setupMovableCamera()
-
-        binding.navDrive.setOnClickListener {
-            updateNavUI(it)
-            binding.cameraCard.visibility = View.VISIBLE
-            if (!isCameraActive) {
-                startCamera()
-                isCameraActive = true
+            if (!allPermissionsGranted()) {
+                ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, 10)
             }
-            locationOverlay.enableFollowLocation()
-        }
 
-        binding.navAlerts.setOnClickListener {
-            updateNavUI(it)
-            startActivity(Intent(this, HistoryActivity::class.java))
-        }
+            // ── Navigation button listeners ────────────────────────────────────
+            binding.navDrive.setOnClickListener {
+                updateNavUI(it)
+                locationOverlay.enableFollowLocation()
+            }
 
-        binding.navSettings.setOnClickListener {
-            updateNavUI(it)
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
+            binding.navAlerts.setOnClickListener {
+                updateNavUI(it)
+                if (SessionManager.isAdmin(this)) {
+                    startActivity(Intent(this, OverviewActivity::class.java))
+                } else {
+                    startActivity(Intent(this, HistoryActivity::class.java))
+                }
+            }
 
-        binding.btnRecenter.setOnClickListener {
-            locationOverlay.myLocation?.let { location ->
-                map.controller.animateTo(location)
-                map.controller.setZoom(19.0)
-            } ?: Toast.makeText(this, "Searching for GPS...", Toast.LENGTH_SHORT).show()
-        }
+            binding.navSettings.setOnClickListener {
+                updateNavUI(it)
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
 
-        binding.btnHideCamera.setOnClickListener {
-            binding.cameraCard.visibility = View.GONE
-        }
+            binding.navAccount.setOnClickListener {
+                if (SessionManager.isLoggedIn(this)) {
+                    showLogoutDialog()
+                } else {
+                    loginLauncher.launch(Intent(this, LoginActivity::class.java))
+                }
+            }
 
-        binding.btnTheme.setOnClickListener {
-            val isNightMode = AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
-            AppCompatDelegate.setDefaultNightMode(if (isNightMode) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES)
-        }
+            binding.btnRecenter.setOnClickListener {
+                locationOverlay.myLocation?.let { location ->
+                    map.controller.animateTo(location)
+                    map.controller.setZoom(19.0)
+                } ?: Toast.makeText(this, "Searching for GPS...", Toast.LENGTH_SHORT).show()
+            }
 
-        setupSearchBar()
-        
-        cameraExecutor = Executors.newSingleThreadExecutor()
+            binding.btnTheme.setOnClickListener {
+                val isNightMode = AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
+                AppCompatDelegate.setDefaultNightMode(
+                    if (isNightMode) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+                )
+            }
+
+            setupSearchBar()
+
+            // Apply the correct nav state for the current session
+            updateNavForRole()
+
+        } catch (e: Exception) {
+            Log.e("RoadWise", "FATAL STARTUP ERROR", e)
+            Toast.makeText(this, "Startup error: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
-    override fun onResume() {
-        super.onResume()
-        bumpDetector.updateThreshold(this)
+    // ── Role-based Navigation ──────────────────────────────────────────────────
+
+    /**
+     * Updates the middle (alerts) tab and account tab appearance based on role.
+     * - Admin: tab becomes "Overview" with analytics icon.
+     * - Standard user: tab stays "History" with bell icon.
+     */
+    private fun updateNavForRole() {
+        val isAdmin    = SessionManager.isAdmin(this)
+        val isLoggedIn = SessionManager.isLoggedIn(this)
+        val teal       = ContextCompat.getColor(this, R.color.brand_teal)
+        val faded      = ContextCompat.getColor(this, R.color.text_med_emphasis_dark)
+
+        if (isAdmin) {
+            binding.navAlerts.setImageResource(R.drawable.ic_analytics)
+            binding.navAlertsLabel.text = "Overview"
+        } else {
+            binding.navAlerts.setImageResource(R.drawable.ic_alerts)
+            binding.navAlertsLabel.text = "History"
+        }
+
+        // Account icon: teal with ✓ tint when logged in
+        binding.navAccount.setColorFilter(if (isLoggedIn) teal else faded)
+        binding.navAccountLabel.setTextColor(if (isLoggedIn) teal else faded)
+        binding.navAccountLabel.text = if (isLoggedIn) SessionManager.getUserName(this).take(8) else "Account"
     }
+
+    private fun showLogoutDialog() {
+        val email = SessionManager.getUserEmail(this)
+        val role  = if (SessionManager.isAdmin(this)) "Admin" else "Standard User"
+        AlertDialog.Builder(this)
+            .setTitle("Signed In")
+            .setMessage("$email\nRole: $role\n\nSign out of RoadWise?")
+            .setPositiveButton("Sign Out") { _, _ ->
+                SessionManager.logout(this)
+                updateNavForRole()
+                Toast.makeText(this, "Signed out successfully.", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // ── Nav UI helper ──────────────────────────────────────────────────────────
+
+    private fun updateNavUI(active: View) {
+        val faded = ContextCompat.getColor(this, R.color.text_med_emphasis_dark)
+        val teal  = ContextCompat.getColor(this, R.color.brand_teal)
+
+        binding.navDrive.setColorFilter(faded)
+        binding.navAlerts.setColorFilter(faded)
+        binding.navSettings.setColorFilter(faded)
+        binding.navDriveLabel.setTextColor(faded)
+        binding.navAlertsLabel.setTextColor(faded)
+        binding.navSettingsLabel.setTextColor(faded)
+
+        when (active.id) {
+            R.id.navDrive    -> { binding.navDrive.setColorFilter(teal);    binding.navDriveLabel.setTextColor(teal) }
+            R.id.navAlerts   -> { binding.navAlerts.setColorFilter(teal);   binding.navAlertsLabel.setTextColor(teal) }
+            R.id.navSettings -> { binding.navSettings.setColorFilter(teal); binding.navSettingsLabel.setTextColor(teal) }
+        }
+    }
+
+    // ── Search Bar ─────────────────────────────────────────────────────────────
 
     private fun setupSearchBar() {
         val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, mutableListOf()) {
             override fun getFilter(): android.widget.Filter {
                 return object : android.widget.Filter() {
-                    override fun performFiltering(constraint: CharSequence?): FilterResults {
-                        return FilterResults() // Bypass UI string matching - Nominatim already filtered it!
-                    }
+                    override fun performFiltering(constraint: CharSequence?) = FilterResults()
                     override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
                         if (count > 0) notifyDataSetChanged() else notifyDataSetInvalidated()
                     }
@@ -241,30 +338,20 @@ class MainActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 val query = s?.toString() ?: ""
                 if (query.length < 3) return
-
                 searchJob?.cancel()
                 searchJob = lifecycleScope.launch(Dispatchers.IO) {
-                    delay(500) // Output debounce
-                    
-                    withContext(Dispatchers.Main) {
-                        binding.searchProgress.visibility = View.VISIBLE
-                    }
-                    
-                    val loc = locationOverlay.myLocation
+                    delay(500)
+                    withContext(Dispatchers.Main) { binding.searchProgress.visibility = View.VISIBLE }
+                    val loc     = locationOverlay.myLocation
                     val results = routingManager.searchPlaces(query, loc?.latitude, loc?.longitude)
-                    
                     withContext(Dispatchers.Main) {
                         binding.searchProgress.visibility = View.GONE
                         searchResults = results
                         adapter.clear()
-                        if (results.isEmpty()) {
-                            adapter.add("No result found")
-                        } else {
-                            adapter.addAll(results.map {
-                                val p = it.properties
-                                listOfNotNull(p.name, p.street, p.city, p.state, p.country).joinToString(", ")
-                            })
-                        }
+                        if (results.isEmpty()) adapter.add("No result found")
+                        else adapter.addAll(results.map {
+                            listOfNotNull(it.properties.name, it.properties.street, it.properties.city, it.properties.state, it.properties.country).joinToString(", ")
+                        })
                         adapter.notifyDataSetChanged()
                     }
                 }
@@ -272,23 +359,11 @@ class MainActivity : AppCompatActivity() {
         })
 
         binding.searchPlace.setOnItemClickListener { _, _, position, _ ->
-            if (searchResults.isEmpty()) {
-                binding.searchPlace.setText("")
-                return@setOnItemClickListener
-            }
-            
+            if (searchResults.isEmpty()) { binding.searchPlace.setText(""); return@setOnItemClickListener }
             val feature = searchResults.getOrNull(position) ?: return@setOnItemClickListener
-            
-            val lon = feature.geometry.coordinates[0]
-            val lat = feature.geometry.coordinates[1]
-            val dest = GeoPoint(lat, lon)
-            
-            val startCoords = locationOverlay.myLocation
-            if (startCoords == null) {
-                Toast.makeText(this, "Waiting for GPS...", Toast.LENGTH_SHORT).show()
-                return@setOnItemClickListener
-            }
-            
+            val dest    = GeoPoint(feature.geometry.coordinates[1], feature.geometry.coordinates[0])
+            val start   = locationOverlay.myLocation
+            if (start == null) { Toast.makeText(this, "Waiting for GPS...", Toast.LENGTH_SHORT).show(); return@setOnItemClickListener }
             map.overlays.remove(destinationMarker)
             destinationMarker = Marker(map).apply {
                 this.position = dest
@@ -296,250 +371,177 @@ class MainActivity : AppCompatActivity() {
                 title = feature.properties.name ?: "Destination"
             }
             map.overlays.add(destinationMarker)
-            
             map.controller.animateTo(dest)
             map.controller.setZoom(16.0)
-            
-            calculateAndDrawRoute(startCoords, dest)
+            calculateAndDrawRoute(start, dest)
             binding.searchPlace.dismissDropDown()
             binding.searchPlace.clearFocus()
         }
     }
-    
+
+    // ── Map Gestures ───────────────────────────────────────────────────────────
+
     private fun setupMapGestures() {
-        val mapEventsReceiver = object : MapEventsReceiver {
+        val receiver = object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
                 val start = locationOverlay.myLocation
-                if (start == null) {
-                    Toast.makeText(this@MainActivity, "Waiting for GPS location...", Toast.LENGTH_SHORT).show()
-                    return false
-                }
-                
-                // Set Destination Marker
+                if (start == null) { Toast.makeText(this@MainActivity, "Waiting for GPS location...", Toast.LENGTH_SHORT).show(); return false }
                 map.overlays.remove(destinationMarker)
-                destinationMarker = Marker(map).apply {
-                    position = p
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    title = "Destination"
-                }
+                destinationMarker = Marker(map).apply { position = p; setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = "Destination" }
                 map.overlays.add(destinationMarker)
                 map.invalidate()
-                
                 calculateAndDrawRoute(start, p)
                 return true
             }
-
             override fun longPressHelper(p: GeoPoint): Boolean {
-                androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle("RoadWise Simulator")
-                    .setMessage("Add a simulated hazard at this location?")
-                    .setPositiveButton("Pothole") { _, _ -> simulateHazard(p, RoadFeature.POTHOLE) }
-                    .setNeutralButton("Speed Bump") { _, _ -> simulateHazard(p, RoadFeature.SPEED_BUMP) }
+                val types = arrayOf("Pothole", "Speed Bump")
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Select Hazard Type")
+                    .setItems(types) { _, typeWhich ->
+                        val type = if (typeWhich == 0) RoadFeature.POTHOLE else RoadFeature.SPEED_BUMP
+                        
+                        val severities = arrayOf("Minor", "Moderate", "Severe", "Critical (Priority Repair)")
+                        val intensities = arrayOf(0.8f, 1.5f, 2.5f, 3.5f)
+                        
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Select Severity")
+                            .setItems(severities) { _, sevWhich ->
+                                val intensity = intensities[sevWhich]
+                                simulateHazard(p, type, intensity)
+                            }
+                            .show()
+                    }
                     .setNegativeButton("Cancel", null)
                     .show()
                 return true
             }
         }
-        val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
-        map.overlays.add(0, mapEventsOverlay) // Add at bottom
+        map.overlays.add(0, MapEventsOverlay(receiver))
     }
+
+    // ── Routing ────────────────────────────────────────────────────────────────
 
     private fun calculateAndDrawRoute(start: GeoPoint, end: GeoPoint) {
         Toast.makeText(this, "Calculating Safe Route...", Toast.LENGTH_SHORT).show()
         val allPotholes = PotholeRepository.getAllPotholes(this)
-        // Filter: only avoid significant hazards (intensity > 0.8) for better performance
-        val hazardsToAvoid = allPotholes.filter { it.intensity > 0.8f }
-        
+        val hazards     = allPotholes.filter { it.intensity > 0.8f }
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Request up to 3 route candidates that avoid hazards
-                val results = routingManager.getRoute(start, end, hazardsToAvoid)
-                
-                withContext(Dispatchers.Main) {
-                    drawRoutes(results, allPotholes)
-                }
+                val results = routingManager.getRoute(start, end, hazards)
+                withContext(Dispatchers.Main) { drawRoutes(results, allPotholes) }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "Analysis failed.", Toast.LENGTH_SHORT).show()
-                }
+                withContext(Dispatchers.Main) { Toast.makeText(this@MainActivity, "Analysis failed.", Toast.LENGTH_SHORT).show() }
             }
         }
     }
 
     private fun drawRoutes(routes: List<com.roadwise.routing.RouteResult>, allPotholes: List<PotholeData>) {
-        // Clear existing route overlays
         routeOverlays.forEach { map.overlays.remove(it) }
         routeOverlays.clear()
-
-        if (routes.isEmpty()) {
-            Toast.makeText(this, "No route found.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Draw multiple candidates - First one (Index 0) is the most recent "best" path
-        // We add them in reverse order (alternatives first) so the Active route is on top
+        if (routes.isEmpty()) { Toast.makeText(this, "No route found.", Toast.LENGTH_SHORT).show(); return }
         routes.reversed().forEachIndexed { revIndex, routeResult ->
             val originalIndex = routes.size - 1 - revIndex
             val polyline = Polyline().apply {
                 setPoints(routeResult.points)
-                // Style: Active (Original Index 0) vs Alternative
                 if (originalIndex == 0) {
-                    outlinePaint.color = Color.parseColor("#3B82F6") // Bright Blue
+                    outlinePaint.color = Color.parseColor("#3B82F6")
                     outlinePaint.strokeWidth = 18f
                     updateQualityLabel(allPotholes, routeResult.distanceMeters)
                 } else {
-                    outlinePaint.color = Color.parseColor("#94A3B8") // Slate Gray
+                    outlinePaint.color = Color.parseColor("#94A3B8")
                     outlinePaint.alpha = 200
                     outlinePaint.strokeWidth = 14f
                 }
-                
                 outlinePaint.style = Paint.Style.STROKE
                 outlinePaint.strokeCap = Paint.Cap.ROUND
-
-                setOnClickListener { poly, _, _ ->
-                    selectRoute(poly as Polyline, routeResult, allPotholes)
-                    true
-                }
+                setOnClickListener { poly, _, _ -> selectRoute(poly as Polyline, routeResult, allPotholes); true }
             }
             routeOverlays.add(polyline)
-            map.overlays.add(polyline) // Add to top by default
+            map.overlays.add(polyline)
         }
-        
         map.invalidate()
-        Toast.makeText(this, "Found ${routes.size} route candidates", Toast.LENGTH_SHORT).show()
     }
 
     private fun selectRoute(selected: Polyline, data: com.roadwise.routing.RouteResult, allPotholes: List<PotholeData>) {
         routeOverlays.forEach { poly ->
-            if (poly == selected) {
-                poly.outlinePaint.color = Color.parseColor("#3B82F6")
-                poly.outlinePaint.alpha = 255
-                poly.outlinePaint.strokeWidth = 18f
-                updateQualityLabel(allPotholes, data.distanceMeters)
-            } else {
-                poly.outlinePaint.color = Color.parseColor("#94A3B8")
-                poly.outlinePaint.alpha = 200
-                poly.outlinePaint.strokeWidth = 14f
-            }
+            if (poly == selected) { poly.outlinePaint.color = Color.parseColor("#3B82F6"); poly.outlinePaint.alpha = 255; poly.outlinePaint.strokeWidth = 18f; updateQualityLabel(allPotholes, data.distanceMeters) }
+            else { poly.outlinePaint.color = Color.parseColor("#94A3B8"); poly.outlinePaint.alpha = 200; poly.outlinePaint.strokeWidth = 14f }
         }
-        // Force simple re-ordering (selected on top of others)
-        map.overlays.remove(selected)
-        map.overlays.add(selected)
-        
-        map.invalidate()
-        Toast.makeText(this, "Route Selected", Toast.LENGTH_SHORT).show()
+        map.overlays.remove(selected); map.overlays.add(selected); map.invalidate()
     }
 
     private fun updateQualityLabel(allPotholes: List<PotholeData>, distanceMeters: Double) {
-        val routeDistKm = distanceMeters / 1000.0
-        val density = allPotholes.size / routeDistKm
-        val qualityLabel = when {
-            density < 0.5 -> "EXCELLENT"
-            density < 1.5 -> "GREAT"
-            density < 3.0 -> "GOOD"
-            density < 5.0 -> "FAIR"
-            else -> "HAZARDOUS"
-        }
-        binding.qualityValue.text = qualityLabel
-    }
-
-
-
-    private fun saveBitmapToDisk(bitmap: Bitmap): String? {
-        return try {
-            val fileName = "pothole_${UUID.randomUUID()}.jpg"
-            val file = File(getExternalFilesDir(null), fileName)
-            FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
-                out.flush()
-            }
-            file.absolutePath
-        } catch (e: Exception) {
-            null
+        val density = allPotholes.size / (distanceMeters / 1000.0)
+        binding.qualityValue.text = when {
+            density < 0.5 -> "EXCELLENT"; density < 1.5 -> "GREAT"; density < 3.0 -> "GOOD"; density < 5.0 -> "FAIR"; else -> "HAZARDOUS"
         }
     }
+
+    // ── Adaptive Overlay ───────────────────────────────────────────────────────
 
     private fun initAdaptiveOverlay() {
         adaptiveOverlay = AdaptiveRoadOverlay(this, PotholeRepository)
         adaptiveOverlay.refresh()
         map.overlays.add(adaptiveOverlay)
-
         map.addMapListener(object : MapListener {
-            private var lastTier = -1 // -1 = uninitialized
-
+            private var lastTier = -1
             override fun onZoom(e: ZoomEvent): Boolean {
                 val zoom = e.zoomLevel
                 val tier = if (zoom < 15.0) 0 else 1
-                
-                // Toggle Legend Visibility
                 binding.gradeLegend.visibility = if (tier == 0) View.VISIBLE else View.GONE
-
                 if (tier != lastTier) {
                     lastTier = tier
-                    // Crossfade the overlay by animating alpha
                     ValueAnimator.ofInt(0, 255).apply {
                         duration = 400
-                        addUpdateListener {
-                            adaptiveOverlay.setAlpha(it.animatedValue as Int)
-                            map.invalidate()
-                        }
+                        addUpdateListener { adaptiveOverlay.setAlpha(it.animatedValue as Int); map.invalidate() }
                         start()
                     }
                 }
                 return true
             }
-
-            override fun onScroll(e: ScrollEvent): Boolean = true
+            override fun onScroll(e: ScrollEvent) = true
         })
     }
 
-    private fun simulateHazard(location: GeoPoint, type: RoadFeature) {
-        val intensity = if (type == RoadFeature.POTHOLE) 2.6f else 1.2f
-        val data = PotholeData(location, type, intensity, System.currentTimeMillis(), emptyList())
-        
+    // ── Simulator / Heatmap ────────────────────────────────────────────────────
+
+    private fun simulateHazard(location: GeoPoint, type: RoadFeature, userIntensity: Float) {
+        val intensity = userIntensity
+        val severity = when {
+            intensity >= 2.5f -> Severity.HIGH
+            intensity >= 1.5f -> Severity.MEDIUM
+            else -> Severity.LOW
+        }
+        val data = PotholeData(location, type, intensity, severity, System.currentTimeMillis(), emptyList())
         PotholeRepository.savePothole(this, data)
-        
         runOnUiThread {
-            addHeatmapPoint(data)
-            adaptiveOverlay.refresh()
-            map.invalidate()
-            
-            if (type == RoadFeature.POTHOLE) {
-                verifiedPotholeCount++
-                binding.potholeCount.text = verifiedPotholeCount.toString()
-            }
-            Toast.makeText(this, "Simulated ${type.name} added!", Toast.LENGTH_SHORT).show()
+            addHeatmapPoint(data); adaptiveOverlay.refresh(); map.invalidate()
+            if (type == RoadFeature.POTHOLE) { verifiedPotholeCount++; binding.potholeCount.text = verifiedPotholeCount.toString() }
+            Toast.makeText(this, "Simulated ${severity.name} ${type.name} added!", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun addHeatmapPoint(data: PotholeData) {
-        val marker = Marker(map)
-        marker.position = data.location
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        
-        val size = 120
+        val glowMarker = Marker(map)
+        glowMarker.position = data.location
+        glowMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        val size   = 120
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        
-        val baseColor = if (data.type == RoadFeature.SPEED_BUMP)
-            Color.parseColor("#2DD4BF") // Brand teal for speed bumps
-        else
-            Color.parseColor("#FBBF24") // Brand amber for potholes
+        val baseColor = if (data.type == RoadFeature.SPEED_BUMP) Color.parseColor("#2DD4BF") else Color.parseColor("#FBBF24")
+        val gradient  = RadialGradient(size / 2f, size / 2f, size / 2f, intArrayOf(adjustAlpha(baseColor, 0.6f), Color.TRANSPARENT), null, Shader.TileMode.CLAMP)
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, Paint().also { it.shader = gradient })
+        glowMarker.icon = BitmapDrawable(resources, bitmap)
+        glowMarker.setInfoWindow(null)
+        map.overlays.add(glowMarker)
 
-        val gradient = RadialGradient(
-            size / 2f, size / 2f, size / 2f,
-            intArrayOf(adjustAlpha(baseColor, 0.6f), Color.TRANSPARENT),
-            null, Shader.TileMode.CLAMP
-        )
-        
-        val paint = Paint()
-        paint.shader = gradient
-        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-        
-        marker.icon = BitmapDrawable(resources, bitmap)
-        marker.setInfoWindow(null)
-        
-        map.overlays.add(marker)
+        val pinMarker = Marker(map)
+        pinMarker.position = data.location
+        pinMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        ContextCompat.getDrawable(this, R.drawable.ic_alerts)?.let { icon -> icon.setTint(baseColor); pinMarker.icon = icon }
+        pinMarker.title   = "${data.severity.name} ${data.type.name}"
+        pinMarker.snippet = "Intensity: ${"%.1f".format(data.intensity)}g\nTime: ${java.text.SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(data.timestamp))}"
+        map.overlays.add(pinMarker)
         map.invalidate()
     }
 
@@ -548,93 +550,25 @@ class MainActivity : AppCompatActivity() {
         return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
-            }
-            val analyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build().also {
-                it.setAnalyzer(cameraExecutor, PotholeAnalyzer(this) { rects, width, height, conf, bitmaps ->
-                    runOnUiThread { binding.graphicOverlay.updateRects(rects, width, height) }
-                    if (rects.isNotEmpty()) detectionManager.onCameraDetection(conf, bitmaps)
-                })
-            }
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analyzer)
-            } catch (e: Exception) { Log.e("RoadWise", "Binding failed", e) }
-        }, ContextCompat.getMainExecutor(this))
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    override fun onResume() {
+        super.onResume()
+        if (::bumpDetector.isInitialized) bumpDetector.updateThreshold(this)
+        updateNavForRole()  // Refresh nav state after returning from any activity
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun setupMovableCamera() {
-        var dX = 0f
-        var dY = 0f
-
-        binding.cameraCard.setOnTouchListener { v, event ->
-            when (event.action) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    dX = v.x - event.rawX
-                    dY = v.y - event.rawY
-                }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    v.animate()
-                        .x(event.rawX + dX)
-                        .y(event.rawY + dY)
-                        .setDuration(0)
-                        .start()
-                }
-                else -> return@setOnTouchListener false
-            }
-            true
-        }
-    }
-
-    private fun updateNavUI(active: View) {
-        val faded = ContextCompat.getColor(this, R.color.text_med_emphasis_dark)
-        val teal = ContextCompat.getColor(this, R.color.brand_teal)
-
-        // Reset all icons and labels to faded
-        binding.navDrive.setColorFilter(faded)
-        binding.navAlerts.setColorFilter(faded)
-        binding.navSettings.setColorFilter(faded)
-        binding.navDriveLabel.setTextColor(faded)
-        binding.navAlertsLabel.setTextColor(faded)
-        binding.navSettingsLabel.setTextColor(faded)
-
-        // Highlight active icon + label
-        when (active.id) {
-            R.id.navDrive -> {
-                binding.navDrive.setColorFilter(teal)
-                binding.navDriveLabel.setTextColor(teal)
-            }
-            R.id.navAlerts -> {
-                binding.navAlerts.setColorFilter(teal)
-                binding.navAlertsLabel.setTextColor(teal)
-            }
-            R.id.navSettings -> {
-                binding.navSettings.setColorFilter(teal)
-                binding.navSettingsLabel.setTextColor(teal)
-            }
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        cameraExecutor.shutdown()   
-        bumpDetector.stop()
+        if (::bumpDetector.isInitialized) bumpDetector.stop()
     }
 
     companion object {
         private val REQUIRED_PERMISSIONS = arrayOf(
-            Manifest.permission.CAMERA,
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
         )

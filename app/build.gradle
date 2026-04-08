@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -77,9 +78,13 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
 
-    // Firebase (for syncing pothole data) - Disabled for local testing
-    // implementation platform('com.google.firebase:firebase-bom:32.3.1')
-    // implementation 'com.google.firebase:firebase-firestore-ktx'
+    // Signal Processing (FFT)
+    implementation 'com.github.wendykierp:JTransforms:3.1'
+
+    // Firebase (for syncing pothole data) - ENABLED
+    implementation platform('com.google.firebase:firebase-bom:32.3.1')
+    implementation 'com.google.firebase:firebase-firestore-ktx'
+    implementation 'com.google.firebase:firebase-auth-ktx'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

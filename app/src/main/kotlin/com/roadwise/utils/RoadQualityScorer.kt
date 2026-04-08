@@ -52,6 +52,7 @@ object RoadQualityScorer {
         // PotholeData.intensity is G-force magnitude (0.0–3.0+)
         val penalty = points.sumOf { p ->
             when {
+                p.intensity >= 3.0 -> 45.0   // Emergency crater (instantly triggers Grade C Actionable)
                 p.intensity >= 2.5 -> 35.0   // Critical hit
                 p.intensity >= 1.5 -> 20.0   // Severe
                 p.intensity >= 0.8 -> 10.0   // Moderate

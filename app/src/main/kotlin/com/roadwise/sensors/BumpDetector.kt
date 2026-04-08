@@ -5,24 +5,36 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import org.jtransforms.fft.FloatFFT_1D
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 enum class RoadFeature {
     POTHOLE, SPEED_BUMP, UNKNOWN
 }
 
-class BumpDetector(context: Context, private val onFeatureDetected: (RoadFeature, Float) -> Unit) : SensorEventListener {
+class BumpDetector(
+    context: Context,
+    private val getCurrentSpeedKmh: () -> Int,
+    private val onFeatureDetected: (RoadFeature, Float) -> Unit
+) : SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
 
     private var threshold = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
         .getFloat("pref_sensor_threshold", 3.8f)
-    private var lastZ = 0.0f
-    
-    // Signature Tracking
-    private var pendingFeature: RoadFeature = RoadFeature.UNKNOWN
-    private var pendingTimestamp: Long = 0
-    private val SIGNATURE_WINDOW_MS = 600L // Time to complete the Up/Down cycle
+
+    // Window size should be a power of 2 for FFT efficiency
+    private val windowSize = 64
+    private val zHistory = FloatArray(windowSize)
+    private var historyIndex = 0
+    private var samplesCount = 0
+
+    private val MIN_SPEED_KMH = 15
+    private var lastEventTime = 0L
+
+    private val fft = FloatFFT_1D(windowSize.toLong())
 
     fun start() {
         accelerometer?.let {
@@ -40,46 +52,77 @@ class BumpDetector(context: Context, private val onFeatureDetected: (RoadFeature
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
-            val z = event.values[2] 
-            val currentTime = System.currentTimeMillis()
-            
-            if (lastZ != 0.0f) {
-                val deltaZ = z - lastZ
-                
-                // State Machine Logic
-                if (pendingFeature == RoadFeature.UNKNOWN) {
-                    // Step 1: Detect the START of a movement
-                    if (deltaZ > threshold) {
-                        // Rising -> Potential Speed Bump
-                        pendingFeature = RoadFeature.SPEED_BUMP
-                        pendingTimestamp = currentTime
-                    } else if (deltaZ < -threshold) {
-                        // Falling -> Potential Pothole
-                        pendingFeature = RoadFeature.POTHOLE
-                        pendingTimestamp = currentTime
-                    }
-                } else {
-                    // Step 2: Look for the COMPLETION of the signature
-                    val timeElapsed = currentTime - pendingTimestamp
-                    
-                    if (timeElapsed > SIGNATURE_WINDOW_MS) {
-                        // Timeout: It was just a single jolt, not a hump/hole
-                        pendingFeature = RoadFeature.UNKNOWN
-                    } else {
-                        if (pendingFeature == RoadFeature.SPEED_BUMP && deltaZ < -threshold) {
-                            // Up then Down! Signature for Speed Bump confirmed.
-                            onFeatureDetected(RoadFeature.SPEED_BUMP, deltaZ)
-                            pendingFeature = RoadFeature.UNKNOWN
-                        } else if (pendingFeature == RoadFeature.POTHOLE && deltaZ > threshold) {
-                            // Down then Up! Signature for Pothole confirmed.
-                            onFeatureDetected(RoadFeature.POTHOLE, deltaZ)
-                            pendingFeature = RoadFeature.UNKNOWN
-                        }
-                    }
-                }
+        if (event?.sensor?.type == Sensor.TYPE_LINEAR_ACCELERATION) {
+            val currentSpeed = getCurrentSpeedKmh()
+
+            if (currentSpeed < MIN_SPEED_KMH) {
+                samplesCount = 0
+                return
             }
-            lastZ = z
+
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+
+            // Horizontal Noise Filter
+            if (abs(x) > threshold * 1.5f || abs(y) > threshold * 1.5f) return
+
+            zHistory[historyIndex] = z
+            historyIndex = (historyIndex + 1) % windowSize
+            if (samplesCount < windowSize) samplesCount++
+
+            if (samplesCount == windowSize) {
+                analyzeWindow()
+            }
+        }
+    }
+
+    private fun analyzeWindow() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastEventTime < 2000) return
+
+        var maxAbsZ = 0f
+        val fftData = FloatArray(windowSize * 2) // Real and Imaginary parts
+
+        for (i in 0 until windowSize) {
+            val v = zHistory[i]
+            if (abs(v) > maxAbsZ) maxAbsZ = abs(v)
+            fftData[i] = v // Fill real part
+        }
+
+        if (maxAbsZ > threshold) {
+            // Perform FFT
+            fft.realForward(fftData)
+
+            // Extract Spectral Energy
+            // Low Freq: 0 to 5Hz (roughly first 5 bins at ~100Hz sampling)
+            // High Freq: 10Hz to 50Hz (bins 10 to 32)
+            var lowFreqEnergy = 0f
+            var highFreqEnergy = 0f
+
+            for (i in 1 until windowSize / 2) {
+                val real = fftData[2 * i]
+                val imag = fftData[2 * i + 1]
+                val magnitude = sqrt(real * real + imag * imag)
+
+                if (i <= 5) lowFreqEnergy += magnitude
+                else if (i > 8) highFreqEnergy += magnitude
+            }
+
+            // Spectral Ratio: Potholes have much more high-frequency noise
+            val spectralRatio = highFreqEnergy / (lowFreqEnergy + 1e-6f)
+
+            if (spectralRatio > 1.2f) {
+                // High frequency energy dominant -> Pothole
+                onFeatureDetected(RoadFeature.POTHOLE, maxAbsZ)
+                lastEventTime = currentTime
+                samplesCount = 0
+            } else if (lowFreqEnergy > highFreqEnergy * 1.5f) {
+                // Low frequency energy dominant -> Speed Breaker
+                onFeatureDetected(RoadFeature.SPEED_BUMP, maxAbsZ)
+                lastEventTime = currentTime
+                samplesCount = 0
+            }
         }
     }
 

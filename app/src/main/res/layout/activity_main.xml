@@ -62,69 +62,7 @@
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Floating Camera Preview Card -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cameraCard"
-        android:layout_width="150dp"
-        android:layout_height="220dp"
-        android:layout_margin="16dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="16dp"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:strokeColor="?attr/glassBorder"
-        app:strokeWidth="1dp">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <androidx.camera.view.PreviewView
-                android:id="@+id/viewFinder"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <com.roadwise.camera.GraphicOverlay
-                android:id="@+id/graphicOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/camera_vignette" />
-
-            <!-- Camera label badge -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                android:background="#AA000000"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="3dp"
-                android:text="LIVE"
-                android:textColor="#2DD4BF"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.15"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <ImageButton
-                android:id="@+id/btnHideCamera"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:layout_margin="8dp"
-                android:background="@drawable/circle_indicator"
-                android:backgroundTint="#AA000000"
-                android:padding="6dp"
-                android:src="@drawable/ic_close"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:tint="@color/white" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </com.google.android.material.card.MaterialCardView>
 
     <!-- Stats HUD Card (Glassmorphism) -->
     <com.google.android.material.card.MaterialCardView
@@ -345,7 +283,7 @@
 
             <!-- Drive Tab -->
             <LinearLayout
-                android:layout_width="72dp"
+                android:layout_width="66dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center">
@@ -357,23 +295,24 @@
                     android:src="@drawable/ic_drive"
                     app:tint="@color/brand_teal" />
                 <TextView
+                    android:id="@+id/navDriveLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Drive"
                     android:textSize="10sp"
                     android:textColor="@color/brand_teal"
-                    android:textStyle="bold"
-                    android:id="@+id/navDriveLabel" />
+                    android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Alerts Tab -->
+            <!-- History / Overview Tab (swapped dynamically for admin) -->
             <LinearLayout
-                android:layout_width="72dp"
+                android:id="@+id/navAlertsContainer"
+                android:layout_width="66dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginStart="4dp">
+                android:layout_marginStart="2dp">
                 <ImageButton
                     android:id="@+id/navAlerts"
                     android:layout_width="40dp"
@@ -382,22 +321,22 @@
                     android:src="@drawable/ic_alerts"
                     app:tint="?attr/textFaded" />
                 <TextView
+                    android:id="@+id/navAlertsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="History"
                     android:textSize="10sp"
-                    android:textColor="?attr/textFaded"
-                    android:id="@+id/navAlertsLabel" />
+                    android:textColor="?attr/textFaded" />
             </LinearLayout>
 
             <!-- Settings Tab -->
             <LinearLayout
-                android:layout_width="72dp"
+                android:layout_width="66dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginStart="4dp">
+                android:layout_marginStart="2dp">
                 <ImageButton
                     android:id="@+id/navSettings"
                     android:layout_width="40dp"
@@ -406,13 +345,37 @@
                     android:src="@drawable/ic_settings"
                     app:tint="?attr/textFaded" />
                 <TextView
+                    android:id="@+id/navSettingsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Settings"
                     android:textSize="10sp"
-                    android:textColor="?attr/textFaded"
-                    android:id="@+id/navSettingsLabel" />
+                    android:textColor="?attr/textFaded" />
+            </LinearLayout>
+
+            <!-- Account Tab -->
+            <LinearLayout
+                android:layout_width="66dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginStart="2dp">
+                <ImageButton
+                    android:id="@+id/navAccount"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_person"
+                    app:tint="?attr/textFaded" />
+                <TextView
+                    android:id="@+id/navAccountLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Account"
+                    android:textSize="10sp"
+                    android:textColor="?attr/textFaded" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

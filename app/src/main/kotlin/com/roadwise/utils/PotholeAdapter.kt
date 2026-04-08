@@ -47,10 +47,16 @@ class PotholeAdapter(
 
         // Type-specific theming: amber for potholes, teal for speed bumps
         val isSpeedBump = pothole.type == RoadFeature.SPEED_BUMP
-        val typeColor = if (isSpeedBump) R.color.brand_teal else R.color.brand_amber
+        val typeColor = if (isSpeedBump) R.color.brand_teal else {
+            when(pothole.severity) {
+                Severity.LOW -> R.color.brand_blue
+                Severity.MEDIUM -> R.color.brand_amber
+                Severity.HIGH -> android.R.color.holo_red_dark
+            }
+        }
         val typeColorInt = ContextCompat.getColor(ctx, typeColor)
 
-        holder.tvType.text = if (isSpeedBump) "Speed Bump" else "Pothole"
+        holder.tvType.text = "${pothole.severity.name} ${if (isSpeedBump) "Speed Bump" else "Pothole"}"
         holder.tvType.setTextColor(typeColorInt)
         holder.typeRing.backgroundTintList = ContextCompat.getColorStateList(ctx, typeColor)
         holder.pbIntensity.progressTintList = ContextCompat.getColorStateList(ctx, typeColor)
@@ -63,7 +69,8 @@ class PotholeAdapter(
         holder.tvLocation.text = "$lat° $latDir, $lon° $lonDir"
 
         val sdf = SimpleDateFormat("MMM dd · HH:mm", Locale.getDefault())
-        holder.tvDateTime.text = sdf.format(Date(pothole.timestamp))
+        val intensityG = "%.1f G".format(pothole.intensity)
+        holder.tvDateTime.text = "${sdf.format(Date(pothole.timestamp))}  ·  $intensityG"
 
         // Intensity bar — map g-force to a 0-100 scale (max ~10g)
         val intensityPercent = (abs(pothole.intensity) / 10f * 100).toInt().coerceIn(5, 100)
