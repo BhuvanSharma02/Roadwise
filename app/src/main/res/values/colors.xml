@@ -3,34 +3,32 @@
     <!-- Brand Accents -->
     <color name="brand_amber">#FBBF24</color>
     <color name="brand_amber_dark">#D97706</color>
-    <color name="brand_teal">#2DD4BF</color>
+    <color name="brand_teal">#00E5FF</color> <!-- Now using Neon Cyan -->
     <color name="brand_blue">#3B82F6</color>
     
-    <!-- Dark Theme Colors -->
-    <color name="obsidian_background">#0F172A</color>
-    <color name="obsidian_surface">#1E293B</color>
-    <color name="obsidian_surface_glass">#D91E293B</color> <!-- 85% opacity -->
-    <color name="obsidian_surface_glass_deep">#CC0F172A</color> <!-- 80% opacity dark -->
-    <color name="neutral_900">#0F172A</color>
-    <color name="neutral_800">#1E293B</color>
-    
-    <!-- Light Theme Colors -->
-    <color name="pearl_background">#F8FAFC</color>
-    <color name="pearl_surface">#FFFFFF</color>
-    <color name="pearl_surface_glass">#E6FFFFFF</color> <!-- 90% opacity -->
+    <!-- Neon Navigator System -->
+    <color name="neon_background">#0F131F</color>
+    <color name="neon_background_lowest">#0A0E1A</color>
+    <color name="neon_surface">#1B1F2C</color>
+    <color name="neon_surface_high">#262A37</color>
+    <color name="neon_surface_highest">#313442</color>
 
-    <!-- Dark Mode Text Colors -->
-    <color name="text_high_emphasis_dark">#F1F5F9</color>
-    <color name="text_med_emphasis_dark">#94A3B8</color>
+    <color name="neon_primary">#00E5FF</color>
+    <color name="neon_primary_dim">#00DAF3</color>
+
+    <!-- Typography Colors -->
+    <color name="neon_text_high">#DFE2F3</color>
+    <color name="neon_text_med">#BAC9CC</color>
     
-    <!-- Light Mode Text Colors -->
-    <color name="text_high_emphasis_light">#0F172A</color>
-    <color name="text_med_emphasis_light">#64748B</color>
+    <!-- Borders and Accents -->
+    <color name="neon_outline">#3B494C</color> <!-- Ghost Border fallback -->
     
-    <!-- Glass Borders -->
-    <color name="glass_border_dark">#22FFFFFF</color>
-    <color name="glass_border_light">#22000000</color>
-    
+    <!-- Glassmorphism Tokens -->
+    <color name="glass_surface">#D91B1F2C</color> <!-- 85% opacity surface -->
+    <color name="glass_surface_deep">#E60F131F</color> <!-- 90% opacity deep background -->
+    <color name="glass_ghost_border">#333B494C</color> <!-- 20% opacity outline -->
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00000000</color>
 </resources>

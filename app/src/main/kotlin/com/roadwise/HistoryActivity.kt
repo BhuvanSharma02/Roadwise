@@ -26,7 +26,6 @@ import com.roadwise.databinding.ActivityHistoryBinding
 import com.roadwise.models.PotholeData
 import com.roadwise.utils.PotholeAdapter
 import com.roadwise.utils.PotholeRepository
-import com.roadwise.utils.ImageAnalyzer
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat

@@ -11,6 +11,11 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import com.roadwise.databinding.ActivitySettingsBinding
 import com.roadwise.utils.PotholeRepository
+import com.roadwise.services.DriveGuardService
+import android.app.ActivityManager
+import android.util.Log
+import com.google.android.gms.location.*
+import android.app.PendingIntent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
 class SettingsActivity : AppCompatActivity() {
@@ -60,6 +65,27 @@ class SettingsActivity : AppCompatActivity() {
             prefs.edit().putBoolean("pref_background_detection", isChecked).apply()
         }
 
+        binding.switchBackgroundService.isChecked = isServiceRunning(DriveGuardService::class.java)
+        binding.switchBackgroundService.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_background_service", isChecked).apply()
+            val intent = Intent(this, DriveGuardService::class.java)
+            if (isChecked) {
+                startForegroundService(intent)
+            } else {
+                stopService(intent)
+            }
+        }
+
+        binding.switchAutoStart.isChecked = prefs.getBoolean("pref_auto_start", false)
+        binding.switchAutoStart.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_auto_start", isChecked).apply()
+            if (isChecked) {
+                requestActivityTransitions()
+            } else {
+                removeActivityTransitions()
+            }
+        }
+
         binding.sliderSensitivity.value = prefs.getFloat("pref_sensitivity_index", 1.0f)
         updateSensitivityLabel(prefs.getFloat("pref_sensitivity_index", 1.0f))
         binding.sliderSensitivity.addOnChangeListener { _, value, _ ->
@@ -80,6 +106,11 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchBattery.isChecked = prefs.getBoolean("pref_battery_saver", false)
         binding.switchBattery.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("pref_battery_saver", isChecked).apply()
+        }
+
+        binding.switchVoiceAlerts.isChecked = prefs.getBoolean("pref_voice_alerts", true)
+        binding.switchVoiceAlerts.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_voice_alerts", isChecked).apply()
         }
 
         // ─────────────────────────────────────────────
@@ -169,6 +200,57 @@ class SettingsActivity : AppCompatActivity() {
             bytes < 1024 * 1024 -> "${"%.1f".format(bytes / 1024.0)} KB"
             else -> "${"%.2f".format(bytes / (1024.0 * 1024.0))} MB"
         }
+    }
+
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun requestActivityTransitions() {
+        val transitions = mutableListOf<ActivityTransition>()
+        transitions.add(
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.IN_VEHICLE)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build()
+        )
+        transitions.add(
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.IN_VEHICLE)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build()
+        )
+
+        val request = ActivityTransitionRequest(transitions)
+        val intent = Intent(this, com.roadwise.services.DrivingReceiver::class.java).apply {
+            action = "com.roadwise.ACTION_ACTIVITY_TRANSITION"
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            this, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        try {
+            ActivityRecognition.getClient(this)
+                .requestActivityTransitionUpdates(request, pendingIntent)
+        } catch (e: SecurityException) {
+            Log.e("Settings", "Activity Recognition permission missing", e)
+        }
+    }
+
+    private fun removeActivityTransitions() {
+        val intent = Intent(this, com.roadwise.services.DrivingReceiver::class.java).apply {
+            action = "com.roadwise.ACTION_ACTIVITY_TRANSITION"
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            this, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        ActivityRecognition.getClient(this).removeActivityTransitionUpdates(pendingIntent)
     }
 
     private fun setupNavigation() {

@@ -3,14 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/obsidian_background">
+    android:background="@color/neon_background_lowest">
 
     <!-- Glowing Background Elements -->
     <View
         android:layout_width="300dp"
         android:layout_height="300dp"
         android:background="@drawable/circle_indicator"
-        android:backgroundTint="#102DD4BF"
+        android:backgroundTint="#1000E5FF"
         app:layout_constraintCircle="@id/logoContainer"
         app:layout_constraintCircleAngle="45"
         app:layout_constraintCircleRadius="40dp"
@@ -34,10 +34,10 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="100dp"
             android:layout_height="100dp"
-            app:cardBackgroundColor="@color/obsidian_surface"
+            app:cardBackgroundColor="@color/neon_surface"
             app:cardCornerRadius="30dp"
             app:cardElevation="12dp"
-            app:strokeColor="@color/glass_border_dark"
+            app:strokeColor="@color/glass_ghost_border"
             app:strokeWidth="1dp">
 
             <ImageView
@@ -65,7 +65,7 @@
             android:layout_marginTop="8dp"
             android:letterSpacing="0.1"
             android:text="Intelligent Pothole Mapping"
-            android:textColor="@color/text_med_emphasis_dark"
+            android:textColor="@color/neon_text_med"
             android:textSize="14sp" />
 
     </LinearLayout>
@@ -84,7 +84,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
         android:text="v2.1.0"
-        android:textColor="@color/text_med_emphasis_dark"
+        android:textColor="@color/neon_text_med"
         android:textSize="10sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

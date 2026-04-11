@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/obsidian_background">
+    android:background="@color/neon_background_lowest">
 
     <!-- Teal ambient glow (top-center) -->
     <View
@@ -38,7 +38,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_close"
         android:padding="10dp"
-        app:tint="@color/text_med_emphasis_dark"
+        app:tint="@color/neon_text_med"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -48,10 +48,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_margin="24dp"
-        app:cardBackgroundColor="@color/obsidian_surface"
+        app:cardBackgroundColor="@color/neon_surface"
         app:cardCornerRadius="28dp"
         app:cardElevation="16dp"
-        app:strokeColor="@color/glass_border_dark"
+        app:strokeColor="@color/glass_ghost_border"
         app:strokeWidth="1dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -76,9 +76,9 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    app:cardBackgroundColor="@color/obsidian_background"
+                    app:cardBackgroundColor="@color/neon_background_lowest"
                     app:cardCornerRadius="14dp"
-                    app:strokeColor="@color/glass_border_dark"
+                    app:strokeColor="@color/glass_ghost_border"
                     app:strokeWidth="1dp">
                     <ImageView
                         android:layout_width="match_parent"
@@ -97,7 +97,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="RoadWise"
-                        android:textColor="@color/text_high_emphasis_dark"
+                        android:textColor="@color/neon_text_high"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:fontFamily="sans-serif-medium" />
@@ -105,7 +105,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Sign in to your account"
-                        android:textColor="@color/text_med_emphasis_dark"
+                        android:textColor="@color/neon_text_med"
                         android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -121,16 +121,16 @@
                 app:boxStrokeColor="@color/brand_teal"
                 app:hintTextColor="@color/brand_teal"
                 app:startIconDrawable="@drawable/ic_person"
-                app:startIconTint="@color/text_med_emphasis_dark"
-                app:boxBackgroundColor="@color/obsidian_background">
+                app:startIconTint="@color/neon_text_med"
+                app:boxBackgroundColor="@color/neon_background">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etEmail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textEmailAddress"
-                    android:textColor="@color/text_high_emphasis_dark"
-                    android:textColorHint="@color/text_med_emphasis_dark"
+                    android:textColor="@color/neon_text_high"
+                    android:textColorHint="@color/neon_text_med"
                     android:imeOptions="actionNext" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -145,17 +145,17 @@
                 app:boxStrokeColor="@color/brand_teal"
                 app:hintTextColor="@color/brand_teal"
                 app:startIconDrawable="@drawable/ic_settings"
-                app:startIconTint="@color/text_med_emphasis_dark"
+                app:startIconTint="@color/neon_text_med"
                 app:passwordToggleEnabled="true"
-                app:boxBackgroundColor="@color/obsidian_background">
+                app:boxBackgroundColor="@color/neon_background">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textPassword"
-                    android:textColor="@color/text_high_emphasis_dark"
-                    android:textColorHint="@color/text_med_emphasis_dark"
+                    android:textColor="@color/neon_text_high"
+                    android:textColorHint="@color/neon_text_med"
                     android:imeOptions="actionDone" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -191,7 +191,7 @@
         android:id="@+id/loadingOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#AA0F172A"
+        android:background="#AA0A0E1A"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"

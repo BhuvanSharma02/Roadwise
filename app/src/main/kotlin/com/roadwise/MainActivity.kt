@@ -46,6 +46,8 @@ import kotlinx.coroutines.withContext
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Polyline
+import com.roadwise.utils.SafetyAlertManager
+import android.content.SharedPreferences
 import android.text.Editable
 import android.text.TextWatcher
 import android.widget.ArrayAdapter
@@ -63,6 +65,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var locationOverlay: MyLocationNewOverlay
     private lateinit var detectionManager: DetectionManager
     private lateinit var routingManager: RoutingManager
+    private lateinit var safetyAlertManager: SafetyAlertManager
+    private lateinit var sharedPrefs: SharedPreferences
     private var destinationMarker: Marker? = null
     private var verifiedPotholeCount = 0
     private var maxSpeedKmh = 0
@@ -149,6 +153,8 @@ class MainActivity : AppCompatActivity() {
 
             initAdaptiveOverlay()
             routingManager = RoutingManager()
+            safetyAlertManager = SafetyAlertManager(this)
+            sharedPrefs = getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
             setupMapGestures()
 
             allDetections.forEach { addHeatmapPoint(it) }
@@ -177,6 +183,14 @@ class MainActivity : AppCompatActivity() {
                         }
                         binding.speedValue.text = "$speedKmh km/h"
                     }
+
+                    // Hazard Proximity Detection
+                    if (sharedPrefs.getBoolean("pref_voice_alerts", true)) {
+                        val location = locationOverlay.myLocation
+                        val bearing = locationOverlay.myLocationProvider?.lastKnownLocation?.bearing ?: 0f
+                        safetyAlertManager.checkHazards(location, bearing, speedKmh)
+                    }
+
                     delay(1000)
                 }
             }
@@ -265,8 +279,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateNavForRole() {
         val isAdmin    = SessionManager.isAdmin(this)
         val isLoggedIn = SessionManager.isLoggedIn(this)
-        val teal       = ContextCompat.getColor(this, R.color.brand_teal)
-        val faded      = ContextCompat.getColor(this, R.color.text_med_emphasis_dark)
+        val teal       = ContextCompat.getColor(this, R.color.neon_primary)
+        val faded      = ContextCompat.getColor(this, R.color.neon_text_med)
 
         if (isAdmin) {
             binding.navAlerts.setImageResource(R.drawable.ic_analytics)
@@ -300,8 +314,8 @@ class MainActivity : AppCompatActivity() {
     // ── Nav UI helper ──────────────────────────────────────────────────────────
 
     private fun updateNavUI(active: View) {
-        val faded = ContextCompat.getColor(this, R.color.text_med_emphasis_dark)
-        val teal  = ContextCompat.getColor(this, R.color.brand_teal)
+        val faded = ContextCompat.getColor(this, R.color.neon_text_med)
+        val teal  = ContextCompat.getColor(this, R.color.neon_primary)
 
         binding.navDrive.setColorFilter(faded)
         binding.navAlerts.setColorFilter(faded)
@@ -565,12 +579,15 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         if (::bumpDetector.isInitialized) bumpDetector.stop()
+        if (::safetyAlertManager.isInitialized) safetyAlertManager.shutdown()
     }
 
     companion object {
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACTIVITY_RECOGNITION,
+            Manifest.permission.POST_NOTIFICATIONS
         )
     }
 }
