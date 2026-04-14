@@ -31,8 +31,6 @@ class DriveGuardService : Service() {
     
     private var currentSpeedKmh = 0
     private var detectionCount = 0
-    private var lastMovementTime = System.currentTimeMillis()
-    private val IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
     private val NOTIFICATION_ID = 1001
     private val CHANNEL_ID = "drive_guard_channel"
 
@@ -80,17 +78,6 @@ class DriveGuardService : Service() {
                     lastLocation = location
                     currentSpeedKmh = (location.speed * 3.6).toInt()
                     
-                    // Update movement timer
-                    if (currentSpeedKmh > 5) {
-                        lastMovementTime = System.currentTimeMillis()
-                    }
-
-                    // Check for idle timeout
-                    if (System.currentTimeMillis() - lastMovementTime > IDLE_TIMEOUT_MS) {
-                        Log.d("DriveGuardService", "Stationary for 5 mins. Stopping service.")
-                        stopSelf()
-                        return
-                    }
                     
                     // Update Notification
                     updateNotification(currentSpeedKmh)

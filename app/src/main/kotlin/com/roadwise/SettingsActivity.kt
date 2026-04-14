@@ -16,6 +16,9 @@ import android.app.ActivityManager
 import android.util.Log
 import com.google.android.gms.location.*
 import android.app.PendingIntent
+import android.provider.Settings
+import android.os.PowerManager
+import android.net.Uri
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
 class SettingsActivity : AppCompatActivity() {
@@ -83,6 +86,22 @@ class SettingsActivity : AppCompatActivity() {
                 requestActivityTransitions()
             } else {
                 removeActivityTransitions()
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // POWER MANAGEMENT — Background Reliability
+        // ─────────────────────────────────────────────
+        binding.btnBatteryOptimize.setOnClickListener {
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback for devices that block direct request
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                startActivity(intent)
             }
         }
 
@@ -169,6 +188,26 @@ class SettingsActivity : AppCompatActivity() {
         setupNavigation()
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateBatteryStatus()
+    }
+
+    private fun updateBatteryStatus() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isIgnoring = pm.isIgnoringBatteryOptimizations(packageName)
+        
+        if (isIgnoring) {
+            binding.tvBatteryStatus.text = "Optimized for background (Allowed)"
+            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.neon_primary))
+            binding.btnBatteryOptimize.visibility = android.view.View.GONE
+        } else {
+            binding.tvBatteryStatus.text = "Restricted by system (Tap Fix Now)"
+            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.neon_text_med))
+            binding.btnBatteryOptimize.visibility = android.view.View.VISIBLE
+        }
+    }
+
     private fun updateSensitivityLabel(value: Float) {
         val (threshold, label) = when (value) {
             0.0f -> Pair(6.0f, "Reactive")
@@ -252,6 +291,7 @@ class SettingsActivity : AppCompatActivity() {
         )
         ActivityRecognition.getClient(this).removeActivityTransitionUpdates(pendingIntent)
     }
+
 
     private fun setupNavigation() {
         binding.navDrive.setOnClickListener {

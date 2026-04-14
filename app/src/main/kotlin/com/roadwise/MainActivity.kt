@@ -122,18 +122,20 @@ class MainActivity : AppCompatActivity() {
                     val data = PotholeData(loc, type, intensity, severity, System.currentTimeMillis(), emptyList())
                     PotholeRepository.savePothole(this, data)
                     runOnUiThread {
-                        addHeatmapPoint(data)
-                        adaptiveOverlay.refresh()
-                        map.controller.animateTo(loc)
-                        val severityLabel = severity.name
-                        if (type == RoadFeature.POTHOLE) {
-                            verifiedPotholeCount++
-                            binding.potholeCount.text = verifiedPotholeCount.toString()
-                            Toast.makeText(this, "⚠️ $severityLabel POTHOLE DETECTED!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(this, "🏁 $severityLabel SPEED BUMP", Toast.LENGTH_SHORT).show()
+                        if (!isFinishing && !isDestroyed && ::map.isInitialized) {
+                            addHeatmapPoint(data)
+                            adaptiveOverlay.refresh()
+                            map.controller.animateTo(loc)
+                            val severityLabel = severity.name
+                            if (type == RoadFeature.POTHOLE) {
+                                verifiedPotholeCount++
+                                binding.potholeCount.text = verifiedPotholeCount.toString()
+                                Toast.makeText(this, "⚠️ $severityLabel POTHOLE DETECTED!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(this, "🏁 $severityLabel SPEED BUMP", Toast.LENGTH_SHORT).show()
+                            }
+                            map.invalidate()
                         }
-                        map.invalidate()
                     }
                 } else {
                     Log.e("RoadWise", "Detection ignored: No GPS fix")
@@ -161,10 +163,12 @@ class MainActivity : AppCompatActivity() {
 
             PotholeRepository.fetchFromCloud(this) { combinedList ->
                 runOnUiThread {
-                    map.overlays.removeAll { it is Marker && it != locationOverlay && it != destinationMarker }
-                    combinedList.forEach { addHeatmapPoint(it) }
-                    adaptiveOverlay.refresh()
-                    map.invalidate()
+                    if (!isFinishing && !isDestroyed && ::map.isInitialized) {
+                        map.overlays.removeAll { it is Marker && it != locationOverlay && it != destinationMarker }
+                        combinedList.forEach { addHeatmapPoint(it) }
+                        adaptiveOverlay.refresh()
+                        map.invalidate()
+                    }
                 }
             }
 
@@ -174,8 +178,8 @@ class MainActivity : AppCompatActivity() {
                     val speedKmh = (speedMs * 3.6).toInt()
                     if (speedKmh > maxSpeedKmh) maxSpeedKmh = speedKmh
                     withContext(Dispatchers.Main) {
-                        if (speedKmh < 15) {
-                            binding.qualityValue.text = "STOPPED (<15KM/H)"
+                        if (speedKmh < 5) {
+                            binding.qualityValue.text = if (speedKmh == 0) "STATIONARY" else "IDLE (SLOW)"
                             binding.qualityValue.setTextColor(Color.GRAY)
                         } else {
                             binding.qualityValue.text = "MONITORING ACTIVE"
@@ -536,6 +540,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun addHeatmapPoint(data: PotholeData) {
+        if (!::map.isInitialized) return
+        
         val glowMarker = Marker(map)
         glowMarker.position = data.location
         glowMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)

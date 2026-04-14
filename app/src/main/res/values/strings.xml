@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">RoadWise</string>
+    <string name="accessibility_service_description">Automatically starts RoadWise monitoring when Google Maps navigation is opened.</string>
 </resources>

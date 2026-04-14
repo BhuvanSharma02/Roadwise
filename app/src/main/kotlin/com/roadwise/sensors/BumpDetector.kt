@@ -31,7 +31,7 @@ class BumpDetector(
     private var historyIndex = 0
     private var samplesCount = 0
 
-    private val MIN_SPEED_KMH = 15
+    private val MIN_SPEED_KMH = 5
     private var lastEventTime = 0L
 
     private val fft = FloatFFT_1D(windowSize.toLong())
