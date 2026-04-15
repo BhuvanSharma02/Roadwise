@@ -191,6 +191,8 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateBatteryStatus()
+        // Refresh service toggle state
+        binding.switchBackgroundService.isChecked = isServiceRunning(DriveGuardService::class.java)
     }
 
     private fun updateBatteryStatus() {
@@ -252,44 +254,11 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun requestActivityTransitions() {
-        val transitions = mutableListOf<ActivityTransition>()
-        transitions.add(
-            ActivityTransition.Builder()
-                .setActivityType(DetectedActivity.IN_VEHICLE)
-                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
-                .build()
-        )
-        transitions.add(
-            ActivityTransition.Builder()
-                .setActivityType(DetectedActivity.IN_VEHICLE)
-                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
-                .build()
-        )
-
-        val request = ActivityTransitionRequest(transitions)
-        val intent = Intent(this, com.roadwise.services.DrivingReceiver::class.java).apply {
-            action = "com.roadwise.ACTION_ACTIVITY_TRANSITION"
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            this, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        try {
-            ActivityRecognition.getClient(this)
-                .requestActivityTransitionUpdates(request, pendingIntent)
-        } catch (e: SecurityException) {
-            Log.e("Settings", "Activity Recognition permission missing", e)
-        }
+        com.roadwise.utils.ActivityTransitionHelper.requestTransitions(this)
     }
 
     private fun removeActivityTransitions() {
-        val intent = Intent(this, com.roadwise.services.DrivingReceiver::class.java).apply {
-            action = "com.roadwise.ACTION_ACTIVITY_TRANSITION"
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            this, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        ActivityRecognition.getClient(this).removeActivityTransitionUpdates(pendingIntent)
+        com.roadwise.utils.ActivityTransitionHelper.removeTransitions(this)
     }
 
 

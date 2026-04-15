@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
 import com.roadwise.MainActivity
@@ -59,7 +60,11 @@ class DriveGuardService : Service() {
         )
 
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification(0))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, buildNotification(0), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification(0))
+        }
         
         startLocationUpdates()
         bumpDetector.start()
@@ -136,9 +141,16 @@ class DriveGuardService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "STOP_SERVICE") {
-            stopSelf()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            "STOP_SERVICE" -> {
+                Log.i("DriveGuardService", "Stop action received.")
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            "START_SERVICE" -> {
+                Log.i("DriveGuardService", "Start action received from notification.")
+                // Service is already starting via onCreate, but we can log it
+            }
         }
         return START_STICKY
     }

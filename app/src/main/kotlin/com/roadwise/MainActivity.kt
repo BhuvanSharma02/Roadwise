@@ -501,24 +501,7 @@ class MainActivity : AppCompatActivity() {
         adaptiveOverlay = AdaptiveRoadOverlay(this, PotholeRepository)
         adaptiveOverlay.refresh()
         map.overlays.add(adaptiveOverlay)
-        map.addMapListener(object : MapListener {
-            private var lastTier = -1
-            override fun onZoom(e: ZoomEvent): Boolean {
-                val zoom = e.zoomLevel
-                val tier = if (zoom < 15.0) 0 else 1
-                binding.gradeLegend.visibility = if (tier == 0) View.VISIBLE else View.GONE
-                if (tier != lastTier) {
-                    lastTier = tier
-                    ValueAnimator.ofInt(0, 255).apply {
-                        duration = 400
-                        addUpdateListener { adaptiveOverlay.setAlpha(it.animatedValue as Int); map.invalidate() }
-                        start()
-                    }
-                }
-                return true
-            }
-            override fun onScroll(e: ScrollEvent) = true
-        })
+        binding.gradeLegend.visibility = View.GONE
     }
 
     // ── Simulator / Heatmap ────────────────────────────────────────────────────
@@ -542,23 +525,15 @@ class MainActivity : AppCompatActivity() {
     private fun addHeatmapPoint(data: PotholeData) {
         if (!::map.isInitialized) return
         
-        val glowMarker = Marker(map)
-        glowMarker.position = data.location
-        glowMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        val size   = 120
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
         val baseColor = if (data.type == RoadFeature.SPEED_BUMP) Color.parseColor("#2DD4BF") else Color.parseColor("#FBBF24")
-        val gradient  = RadialGradient(size / 2f, size / 2f, size / 2f, intArrayOf(adjustAlpha(baseColor, 0.6f), Color.TRANSPARENT), null, Shader.TileMode.CLAMP)
-        canvas.drawCircle(size / 2f, size / 2f, size / 2f, Paint().also { it.shader = gradient })
-        glowMarker.icon = BitmapDrawable(resources, bitmap)
-        glowMarker.setInfoWindow(null)
-        map.overlays.add(glowMarker)
 
         val pinMarker = Marker(map)
         pinMarker.position = data.location
         pinMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        ContextCompat.getDrawable(this, R.drawable.ic_alerts)?.let { icon -> icon.setTint(baseColor); pinMarker.icon = icon }
+        ContextCompat.getDrawable(this, R.drawable.ic_location_pin)?.let { icon -> 
+            icon.setTint(baseColor)
+            pinMarker.icon = icon 
+        }
         pinMarker.title   = "${data.severity.name} ${data.type.name}"
         pinMarker.snippet = "Intensity: ${"%.1f".format(data.intensity)}g\nTime: ${java.text.SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(data.timestamp))}"
         map.overlays.add(pinMarker)
@@ -574,7 +549,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::bumpDetector.isInitialized) bumpDetector.updateThreshold(this)
         updateNavForRole()  // Refresh nav state after returning from any activity
     }
 

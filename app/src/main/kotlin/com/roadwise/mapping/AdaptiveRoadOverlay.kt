@@ -17,9 +17,6 @@ class AdaptiveRoadOverlay(
     private val repository: PotholeRepository
 ) : Overlay() {
 
-    // Zoom threshold that switches between the two views
-    private val ZOOM_THRESHOLD = 15.0
-
     private var segments: List<RoadSegment> = emptyList()
     private var heatmapPoints: List<PotholeData> = emptyList()
     private var overlayAlpha: Int = 255
@@ -40,71 +37,41 @@ class AdaptiveRoadOverlay(
 
     override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
         if (shadow) return
-        val zoom = mapView.zoomLevelDouble
-
-        if (zoom < ZOOM_THRESHOLD) {
-            drawSegmentGrades(canvas, mapView)
-        } else {
-            drawHeatmapPoints(canvas, mapView)
-        }
+        drawHeatmapPoints(canvas, mapView)
     }
 
-    // ── Zoomed-out: color-coded grid cells ─────────────────────────────────
-    private fun drawSegmentGrades(canvas: Canvas, mapView: MapView) {
-        val proj = mapView.projection
-        segments.forEach { seg ->
-            val topLeft     = proj.toPixels(GeoPoint(seg.boundingBox.latNorth, seg.boundingBox.lonWest), null)
-            val bottomRight = proj.toPixels(GeoPoint(seg.boundingBox.latSouth, seg.boundingBox.lonEast), null)
-
-            val rect = RectF(
-                topLeft.x.toFloat(),     topLeft.y.toFloat(),
-                bottomRight.x.toFloat(), bottomRight.y.toFloat()
-            )
-
-            // Filled cell with 55% opacity (scaled by overlayAlpha) so map tiles show through
-            val baseAlpha = 140
-            val finalAlpha = (baseAlpha * (overlayAlpha / 255f)).toInt()
-            segmentPaint.color = ColorUtils.setAlphaComponent(seg.grade.color, finalAlpha)
-            canvas.drawRect(rect, segmentPaint)
-
-            // Grade letter label — only draw if cell is large enough to be legible
-            if (rect.width() > 40f) {
-                val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color     = Color.WHITE
-                    alpha     = overlayAlpha
-                    textSize  = rect.width().coerceIn(14f, 28f)
-                    textAlign = Paint.Align.CENTER
-                    typeface  = Typeface.DEFAULT_BOLD
-                    setShadowLayer(3f, 1f, 1f, Color.BLACK)
-                }
-                canvas.drawText(seg.grade.label.take(1), rect.centerX(), rect.centerY() + textPaint.textSize / 3, textPaint)
-            }
-        }
-    }
-
-    // ── Zoomed-in: individual heatmap blobs ─────────────────────────────────
+    // ── Individual heatmap blobs with pulse effect ───────────────
     private fun drawHeatmapPoints(canvas: Canvas, mapView: MapView) {
         val proj = mapView.projection
+        val time = android.os.SystemClock.uptimeMillis()
+        val pulseCycle = (time % 2000L).toFloat() / 2000f // 0f to 1f over 2 seconds
+
         heatmapPoints.forEach { point ->
             val pixel = proj.toPixels(point.location, null)
-
-            // Outer glow radius scales with intensity
-            val radius = (20f + point.intensity * 10f).coerceIn(20f, 55f)
+            val baseRadius = (15f + point.intensity * 5f).coerceIn(15f, 30f)
             val heatColor = getHeatColor(point.type)
 
-            val gradientPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                shader = RadialGradient(
-                    pixel.x.toFloat(), pixel.y.toFloat(), radius,
-                    intArrayOf(
-                        ColorUtils.setAlphaComponent(heatColor, (200 * (overlayAlpha / 255f)).toInt()),
-                        ColorUtils.setAlphaComponent(heatColor, (60 * (overlayAlpha / 255f)).toInt()),
-                        Color.TRANSPARENT
-                    ),
-                    floatArrayOf(0f, 0.5f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-            }
-            canvas.drawCircle(pixel.x.toFloat(), pixel.y.toFloat(), radius, gradientPaint)
+            // Core circle
+            segmentPaint.color = heatColor
+            segmentPaint.alpha = (overlayAlpha * 0.8f).toInt()
+            segmentPaint.style = Paint.Style.FILL
+            canvas.drawCircle(pixel.x.toFloat(), pixel.y.toFloat(), baseRadius, segmentPaint)
+
+            // Pulse ring
+            val pulseRadius = baseRadius + (baseRadius * 2f * pulseCycle)
+            val pulseAlpha = ((1f - pulseCycle) * overlayAlpha * 0.5f).toInt()
+            segmentPaint.alpha = pulseAlpha.coerceIn(0, 255)
+            segmentPaint.style = Paint.Style.STROKE
+            segmentPaint.strokeWidth = 4f
+            canvas.drawCircle(pixel.x.toFloat(), pixel.y.toFloat(), pulseRadius, segmentPaint)
+            
+            // Reset style back to fill
+            segmentPaint.style = Paint.Style.FILL
+        }
+        
+        // Ensure the map continually redraws to keep the animation running smoothly when zoomed in
+        if (heatmapPoints.isNotEmpty()) {
+            mapView.postInvalidateOnAnimation()
         }
     }
 

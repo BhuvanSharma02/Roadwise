@@ -5,12 +5,10 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import org.jtransforms.fft.FloatFFT_1D
-import kotlin.math.abs
-import kotlin.math.sqrt
+import kotlin.math.*
 
 enum class RoadFeature {
-    POTHOLE, SPEED_BUMP, UNKNOWN
+    POTHOLE, SPEED_BUMP, SMOOTH
 }
 
 class BumpDetector(
@@ -21,57 +19,56 @@ class BumpDetector(
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+    
+    private val model = RoadModelInference(context)
 
-    private var threshold = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
-        .getFloat("pref_sensor_threshold", 3.8f)
-
-    // Window size should be a power of 2 for FFT efficiency
-    private val windowSize = 64
+    // ML Model Parameters: 40 samples @ 20Hz = 2 seconds
+    private val windowSize = 40
+    private val stepSize = 20 // 50% overlap
+    
+    private val xHistory = FloatArray(windowSize)
+    private val yHistory = FloatArray(windowSize)
     private val zHistory = FloatArray(windowSize)
-    private var historyIndex = 0
+    
+    private var writeIndex = 0
     private var samplesCount = 0
 
-    private val MIN_SPEED_KMH = 5
+    private val MIN_SPEED_KMH = 8 // Slightly increased for reliability
     private var lastEventTime = 0L
-
-    private val fft = FloatFFT_1D(windowSize.toLong())
 
     fun start() {
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            // SENSOR_DELAY_GAME is roughly 20ms (50Hz), we need 20Hz (50ms)
+            // We can specify the delay in microseconds: 50,000us = 20Hz
+            sensorManager.registerListener(this, it, 50000)
         }
     }
 
     fun stop() {
         sensorManager.unregisterListener(this)
-    }
-
-    fun updateThreshold(context: Context) {
-        threshold = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
-            .getFloat("pref_sensor_threshold", 3.8f)
+        model.close()
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_LINEAR_ACCELERATION) {
             val currentSpeed = getCurrentSpeedKmh()
 
+            // Only monitor if the vehicle is moving at a reasonable speed
             if (currentSpeed < MIN_SPEED_KMH) {
                 samplesCount = 0
                 return
             }
 
-            val x = event.values[0]
-            val y = event.values[1]
-            val z = event.values[2]
+            // Convert to G-force (m/s^2 -> G)
+            xHistory[writeIndex] = event.values[0] / 9.81f
+            yHistory[writeIndex] = event.values[1] / 9.81f
+            zHistory[writeIndex] = event.values[2] / 9.81f
 
-            // Horizontal Noise Filter
-            if (abs(x) > threshold * 1.5f || abs(y) > threshold * 1.5f) return
+            writeIndex = (writeIndex + 1) % windowSize
+            samplesCount++
 
-            zHistory[historyIndex] = z
-            historyIndex = (historyIndex + 1) % windowSize
-            if (samplesCount < windowSize) samplesCount++
-
-            if (samplesCount == windowSize) {
+            // Process every 'stepSize' samples once the first window is full
+            if (samplesCount >= windowSize && (samplesCount - windowSize) % stepSize == 0) {
                 analyzeWindow()
             }
         }
@@ -79,51 +76,90 @@ class BumpDetector(
 
     private fun analyzeWindow() {
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastEventTime < 2000) return
+        // Cooldown to prevent multiple detections of the same physical event
+        if (currentTime - lastEventTime < 1500) return
 
-        var maxAbsZ = 0f
-        val fftData = FloatArray(windowSize * 2) // Real and Imaginary parts
+        // 1. Extract 12 Features
+        val features = extract12Features()
+        
+        // 2. Run ML Inference
+        val prediction = model.predict(features)
+        
+        // 3. Extract Impact Magnitude (Peak-to-Peak Gs for vertical axis)
+        val impactMagnitude = features[4] // z_peak_to_peak is at index 4
 
+        // 4. Handle Results (Filtering Smooth Road as requested)
+        when (prediction) {
+            1 -> { // SPEED_BUMP
+                onFeatureDetected(RoadFeature.SPEED_BUMP, impactMagnitude)
+                lastEventTime = currentTime
+            }
+            2 -> { // POTHOLE
+                onFeatureDetected(RoadFeature.POTHOLE, impactMagnitude)
+                lastEventTime = currentTime
+            }
+            // 0 is SMOOTH - Ignoring as per user request
+        }
+    }
+
+    private fun extract12Features(): FloatArray {
+        // High-pass filtering matching the Python 'z - mean(z)' strategy
+        val zFiltered = FloatArray(windowSize)
+        val zMeanOrig = zHistory.average().toFloat()
         for (i in 0 until windowSize) {
-            val v = zHistory[i]
-            if (abs(v) > maxAbsZ) maxAbsZ = abs(v)
-            fftData[i] = v // Fill real part
+            zFiltered[i] = zHistory[i] - zMeanOrig
         }
 
-        if (maxAbsZ > threshold) {
-            // Perform FFT
-            fft.realForward(fftData)
+        val zMean = zFiltered.average().toFloat()
+        val zMax = zFiltered.maxOrNull() ?: 0f
+        val zMin = zFiltered.minOrNull() ?: 0f
+        val zP2P = zMax - zMin
+        
+        // Variance and StdDev
+        var zVar = 0f
+        var xVar = 0f
+        var yVar = 0f
+        val xMean = xHistory.average().toFloat()
+        val yMean = yHistory.average().toFloat()
+        
+        for (i in 0 until windowSize) {
+            zVar += (zFiltered[i] - zMean).pow(2)
+            xVar += (xHistory[i] - xMean).pow(2)
+            yVar += (yHistory[i] - yMean).pow(2)
+        }
+        val zStd = sqrt(zVar / (windowSize - 1))
+        val xStd = sqrt(xVar / (windowSize - 1))
+        val yStd = sqrt(yVar / (windowSize - 1))
 
-            // Extract Spectral Energy
-            // Low Freq: 0 to 5Hz (roughly first 5 bins at ~100Hz sampling)
-            // High Freq: 10Hz to 50Hz (bins 10 to 32)
-            var lowFreqEnergy = 0f
-            var highFreqEnergy = 0f
+        // RMS & Energy & Impact Ratio
+        var zRmsSum = 0f
+        var zEnergySum = 0f
+        var impactCount = 0
+        for (v in zFiltered) {
+            zRmsSum += v.pow(2)
+            zEnergySum += v.pow(2)
+            if (abs(v) > 1.2f) impactCount++
+        }
+        val zRms = sqrt(zRmsSum / windowSize)
+        val impactRatio = impactCount.toFloat() / windowSize
 
-            for (i in 1 until windowSize / 2) {
-                val real = fftData[2 * i]
-                val imag = fftData[2 * i + 1]
-                val magnitude = sqrt(real * real + imag * imag)
-
-                if (i <= 5) lowFreqEnergy += magnitude
-                else if (i > 8) highFreqEnergy += magnitude
-            }
-
-            // Spectral Ratio: Potholes have much more high-frequency noise
-            val spectralRatio = highFreqEnergy / (lowFreqEnergy + 1e-6f)
-
-            if (spectralRatio > 1.2f) {
-                // High frequency energy dominant -> Pothole
-                onFeatureDetected(RoadFeature.POTHOLE, maxAbsZ)
-                lastEventTime = currentTime
-                samplesCount = 0
-            } else if (lowFreqEnergy > highFreqEnergy * 1.5f) {
-                // Low frequency energy dominant -> Speed Breaker
-                onFeatureDetected(RoadFeature.SPEED_BUMP, maxAbsZ)
-                lastEventTime = currentTime
-                samplesCount = 0
+        // Skewness & Kurtosis
+        var skewSum = 0f
+        var kurtSum = 0f
+        if (zStd > 1e-6) {
+            for (v in zFiltered) {
+                val diff = (v - zMean) / zStd
+                skewSum += diff.pow(3)
+                kurtSum += diff.pow(4)
             }
         }
+        val zSkew = (skewSum / windowSize)
+        val zKurt = (kurtSum / windowSize)
+
+        return floatArrayOf(
+            zMean, zStd, zMax, zMin, zP2P, zRms, 
+            xStd, yStd, zEnergySum, zSkew, zKurt, impactRatio
+        )
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
