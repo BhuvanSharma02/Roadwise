@@ -14,9 +14,9 @@ class DetectionManager(private val onVerifiedFeature: (RoadFeature, Severity, Fl
     private var lockoutUntil: Long = 0
     private val LOCKOUT_DURATION_MS = 1000L // Increased lockout to prevent double detections
 
-    fun onCameraDetection(_: Float, __: List<Bitmap>) {
-        // Camera logic is now secondary, we can ignore it for sensor truth
-    }
+//    fun onCameraDetection(_: Float, __: List<Bitmap>) {
+//        // Camera logic is now secondary, we can ignore it for sensor truth
+//    }
 
     fun onSensorDetection(type: RoadFeature, intensity: Float) {
         val currentTime = System.currentTimeMillis()
