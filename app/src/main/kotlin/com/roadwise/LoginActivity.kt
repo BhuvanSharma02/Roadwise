@@ -31,6 +31,7 @@ class LoginActivity : AppCompatActivity() {
         }
 
         binding.btnLogin.setOnClickListener { attemptLogin() }
+        binding.btnSignUp.setOnClickListener { attemptSignUp() }
     }
 
     private fun attemptLogin() {
@@ -82,9 +83,46 @@ class LoginActivity : AppCompatActivity() {
             }
     }
 
+    private fun attemptSignUp() {
+        val email    = binding.etEmail.text?.toString()?.trim() ?: ""
+        val password = binding.etPassword.text?.toString() ?: ""
+
+        if (email.isEmpty()) {
+            binding.emailLayout.error = "Email is required"
+            return
+        }
+        if (password.length < 6) {
+            binding.passwordLayout.error = "Password must be ≥ 6 characters"
+            return
+        }
+        binding.emailLayout.error    = null
+        binding.passwordLayout.error = null
+        binding.tvError.visibility   = View.GONE
+
+        setLoading(true)
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    SessionManager.login(
+                        context     = this,
+                        email       = email,
+                        displayName = null,
+                        isAdminClaim = false
+                    )
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                } else {
+                    setLoading(false)
+                    showError(task.exception?.message ?: "Registration failed")
+                }
+            }
+    }
+
     private fun setLoading(loading: Boolean) {
         binding.loadingOverlay.visibility = if (loading) View.VISIBLE else View.GONE
         binding.btnLogin.isEnabled        = !loading
+        binding.btnSignUp.isEnabled       = !loading
     }
 
     private fun showError(message: String) {

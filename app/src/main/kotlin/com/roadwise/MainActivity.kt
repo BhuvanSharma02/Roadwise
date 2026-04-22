@@ -36,6 +36,7 @@ import java.util.*
 import androidx.lifecycle.lifecycleScope
 import com.roadwise.mapping.AdaptiveRoadOverlay
 import com.roadwise.routing.RoutingManager
+import com.roadwise.routing.RouteResult
 import com.roadwise.routing.PhotonFeature
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var routingManager: RoutingManager
     private lateinit var safetyAlertManager: SafetyAlertManager
     private lateinit var sharedPrefs: SharedPreferences
+    private var switchPulseAnimator: ValueAnimator? = null
     private var destinationMarker: Marker? = null
     private var verifiedPotholeCount = 0
     private var maxSpeedKmh = 0
@@ -74,6 +76,20 @@ class MainActivity : AppCompatActivity() {
     private var searchResults: List<PhotonFeature> = emptyList()
     private lateinit var adaptiveOverlay: AdaptiveRoadOverlay
     private val routeOverlays = mutableListOf<Polyline>()
+    private var currentRoutes: List<com.roadwise.routing.RouteResult> = emptyList()
+
+    // ActivityResultLauncher for RouteAnalysis result
+    private val analysisLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val route = result.data?.getParcelableExtra<RouteResult>("SELECTED_ROUTE")
+            route?.let { startNavigation(it) }
+        } else {
+            // Ensure route is cleared if we just come back without starting
+            clearRouteFromMap()
+        }
+    }
 
     // ActivityResultLauncher for LoginActivity result
     private val loginLauncher = registerForActivityResult(
@@ -111,6 +127,7 @@ class MainActivity : AppCompatActivity() {
                 emptyList()
             }
 
+            verifiedPotholeCount = allDetections.count { it.type == RoadFeature.POTHOLE }
             verifiedPotholeCount = allDetections.count { it.type == RoadFeature.POTHOLE }
             binding.potholeCount.text = verifiedPotholeCount.toString()
 
@@ -164,10 +181,7 @@ class MainActivity : AppCompatActivity() {
             PotholeRepository.fetchFromCloud(this) { combinedList ->
                 runOnUiThread {
                     if (!isFinishing && !isDestroyed && ::map.isInitialized) {
-                        map.overlays.removeAll { it is Marker && it != locationOverlay && it != destinationMarker }
-                        combinedList.forEach { addHeatmapPoint(it) }
-                        adaptiveOverlay.refresh()
-                        map.invalidate()
+                        refreshMarkers()
                     }
                 }
             }
@@ -178,12 +192,16 @@ class MainActivity : AppCompatActivity() {
                     val speedKmh = (speedMs * 3.6).toInt()
                     if (speedKmh > maxSpeedKmh) maxSpeedKmh = speedKmh
                     withContext(Dispatchers.Main) {
-                        if (speedKmh < 5) {
-                            binding.qualityValue.text = if (speedKmh == 0) "STATIONARY" else "IDLE (SLOW)"
-                            binding.qualityValue.setTextColor(Color.GRAY)
+                        val monitoringOn = binding.toggleMonitoring.isChecked
+                        if (!monitoringOn) {
+                            binding.monitoringStatus.text = "PASSIVE (ALERTS ONLY)"
+                            binding.monitoringStatus.setTextColor(Color.GRAY)
+                        } else if (speedKmh < 5) {
+                            binding.monitoringStatus.text = if (speedKmh == 0) "STATIONARY" else "IDLE (SLOW)"
+                            binding.monitoringStatus.setTextColor(Color.GRAY)
                         } else {
-                            binding.qualityValue.text = "MONITORING ACTIVE"
-                            binding.qualityValue.setTextColor(Color.parseColor("#10B981"))
+                            binding.monitoringStatus.text = "MONITORING ACTIVE"
+                            binding.monitoringStatus.setTextColor(Color.parseColor("#00FFC2"))
                         }
                         binding.speedValue.text = "$speedKmh km/h"
                     }
@@ -214,7 +232,28 @@ class MainActivity : AppCompatActivity() {
             }) { type, intensity ->
                 detectionManager.onSensorDetection(type, intensity)
             }
-            bumpDetector.start()
+            
+            // monitoring toggle logic
+            val isMonitoringEnabled = sharedPrefs.getBoolean("pref_monitoring_enabled", true)
+            binding.toggleMonitoring.isChecked = isMonitoringEnabled
+
+            binding.toggleMonitoring.setOnCheckedChangeListener { _, isChecked ->
+                sharedPrefs.edit().putBoolean("pref_monitoring_enabled", isChecked).apply()
+                if (isChecked) {
+                    bumpDetector.start()
+                    startSwitchPulse()
+                    Toast.makeText(this, "Monitoring Enabled", Toast.LENGTH_SHORT).show()
+                } else {
+                    bumpDetector.stop()
+                    stopSwitchPulse()
+                    Toast.makeText(this, "Monitoring Disabled (Passive Alerts Only)", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            if (isMonitoringEnabled) {
+                bumpDetector.start()
+                startSwitchPulse()
+            }
 
             if (!allPermissionsGranted()) {
                 ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, 10)
@@ -222,6 +261,7 @@ class MainActivity : AppCompatActivity() {
 
             // ── Navigation button listeners ────────────────────────────────────
             binding.navDrive.setOnClickListener {
+                if (isInNavigationMode) exitNavigation()
                 updateNavUI(it)
                 locationOverlay.enableFollowLocation()
             }
@@ -248,11 +288,21 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            binding.btnStopNav.setOnClickListener {
+                exitNavigation()
+            }
+
             binding.btnRecenter.setOnClickListener {
-                locationOverlay.myLocation?.let { location ->
-                    map.controller.animateTo(location)
+                val loc = locationOverlay.myLocation
+                    ?: locationOverlay.myLocationProvider?.lastKnownLocation?.let { GeoPoint(it) }
+
+                if (loc != null) {
+                    locationOverlay.enableFollowLocation()
+                    map.controller.animateTo(loc)
                     map.controller.setZoom(19.0)
-                } ?: Toast.makeText(this, "Searching for GPS...", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Searching for GPS...", Toast.LENGTH_SHORT).show()
+                }
             }
 
             binding.btnTheme.setOnClickListener {
@@ -262,10 +312,12 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            setupSearchBar()
+            // setupSearchBar()
 
             // Apply the correct nav state for the current session
             updateNavForRole()
+
+            handleFocusIntent(intent)
 
         } catch (e: Exception) {
             Log.e("RoadWise", "FATAL STARTUP ERROR", e)
@@ -275,29 +327,24 @@ class MainActivity : AppCompatActivity() {
 
     // ── Role-based Navigation ──────────────────────────────────────────────────
 
-    /**
-     * Updates the middle (alerts) tab and account tab appearance based on role.
-     * - Admin: tab becomes "Overview" with analytics icon.
-     * - Standard user: tab stays "History" with bell icon.
-     */
     private fun updateNavForRole() {
         val isAdmin    = SessionManager.isAdmin(this)
         val isLoggedIn = SessionManager.isLoggedIn(this)
-        val teal       = ContextCompat.getColor(this, R.color.neon_primary)
-        val faded      = ContextCompat.getColor(this, R.color.neon_text_med)
+        val teal       = ContextCompat.getColor(this, R.color.emerald_neon)
+        val faded      = ContextCompat.getColor(this, R.color.text_med)
 
         if (isAdmin) {
             binding.navAlerts.setImageResource(R.drawable.ic_analytics)
-            binding.navAlertsLabel.text = "Overview"
+            binding.navAlertsLabel.text = "OVERVIEW"
         } else {
             binding.navAlerts.setImageResource(R.drawable.ic_alerts)
-            binding.navAlertsLabel.text = "History"
+            binding.navAlertsLabel.text = "HISTORY"
         }
 
         // Account icon: teal with ✓ tint when logged in
         binding.navAccount.setColorFilter(if (isLoggedIn) teal else faded)
         binding.navAccountLabel.setTextColor(if (isLoggedIn) teal else faded)
-        binding.navAccountLabel.text = if (isLoggedIn) SessionManager.getUserName(this).take(8) else "Account"
+        binding.navAccountLabel.text = if (isLoggedIn) SessionManager.getUserName(this).uppercase().take(8) else "ACCOUNT"
     }
 
     private fun showLogoutDialog() {
@@ -318,8 +365,8 @@ class MainActivity : AppCompatActivity() {
     // ── Nav UI helper ──────────────────────────────────────────────────────────
 
     private fun updateNavUI(active: View) {
-        val faded = ContextCompat.getColor(this, R.color.neon_text_med)
-        val teal  = ContextCompat.getColor(this, R.color.neon_primary)
+        val faded = ContextCompat.getColor(this, R.color.text_med)
+        val teal  = ContextCompat.getColor(this, R.color.emerald_neon)
 
         binding.navDrive.setColorFilter(faded)
         binding.navAlerts.setColorFilter(faded)
@@ -338,6 +385,7 @@ class MainActivity : AppCompatActivity() {
     // ── Search Bar ─────────────────────────────────────────────────────────────
 
     private fun setupSearchBar() {
+        /* Search logic hidden for Cyber-Sleek UI
         val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, mutableListOf()) {
             override fun getFilter(): android.widget.Filter {
                 return object : android.widget.Filter() {
@@ -348,9 +396,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        binding.searchPlace.setAdapter(adapter)
+        binding.searchPlace?.setAdapter(adapter)
 
-        binding.searchPlace.addTextChangedListener(object : TextWatcher {
+        binding.searchPlace?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
@@ -359,11 +407,11 @@ class MainActivity : AppCompatActivity() {
                 searchJob?.cancel()
                 searchJob = lifecycleScope.launch(Dispatchers.IO) {
                     delay(500)
-                    withContext(Dispatchers.Main) { binding.searchProgress.visibility = View.VISIBLE }
+                    withContext(Dispatchers.Main) { binding.searchProgress?.visibility = View.VISIBLE }
                     val loc     = locationOverlay.myLocation
                     val results = routingManager.searchPlaces(query, loc?.latitude, loc?.longitude)
                     withContext(Dispatchers.Main) {
-                        binding.searchProgress.visibility = View.GONE
+                        binding.searchProgress?.visibility = View.GONE
                         searchResults = results
                         adapter.clear()
                         if (results.isEmpty()) adapter.add("No result found")
@@ -376,8 +424,8 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        binding.searchPlace.setOnItemClickListener { _, _, position, _ ->
-            if (searchResults.isEmpty()) { binding.searchPlace.setText(""); return@setOnItemClickListener }
+        binding.searchPlace?.setOnItemClickListener { _, _, position, _ ->
+            if (searchResults.isEmpty()) { binding.searchPlace?.setText(""); return@setOnItemClickListener }
             val feature = searchResults.getOrNull(position) ?: return@setOnItemClickListener
             val dest    = GeoPoint(feature.geometry.coordinates[1], feature.geometry.coordinates[0])
             val start   = locationOverlay.myLocation
@@ -392,9 +440,10 @@ class MainActivity : AppCompatActivity() {
             map.controller.animateTo(dest)
             map.controller.setZoom(16.0)
             calculateAndDrawRoute(start, dest)
-            binding.searchPlace.dismissDropDown()
-            binding.searchPlace.clearFocus()
+            binding.searchPlace?.dismissDropDown()
+            binding.searchPlace?.clearFocus()
         }
+        */
     }
 
     // ── Map Gestures ───────────────────────────────────────────────────────────
@@ -454,45 +503,101 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun drawRoutes(routes: List<com.roadwise.routing.RouteResult>, allPotholes: List<PotholeData>) {
-        routeOverlays.forEach { map.overlays.remove(it) }
-        routeOverlays.clear()
+        currentRoutes = routes
+        clearRouteFromMap()
         if (routes.isEmpty()) { Toast.makeText(this, "No route found.", Toast.LENGTH_SHORT).show(); return }
-        routes.reversed().forEachIndexed { revIndex, routeResult ->
-            val originalIndex = routes.size - 1 - revIndex
-            val polyline = Polyline().apply {
-                setPoints(routeResult.points)
-                if (originalIndex == 0) {
-                    outlinePaint.color = Color.parseColor("#3B82F6")
-                    outlinePaint.strokeWidth = 18f
-                    updateQualityLabel(allPotholes, routeResult.distanceMeters)
-                } else {
-                    outlinePaint.color = Color.parseColor("#94A3B8")
-                    outlinePaint.alpha = 200
-                    outlinePaint.strokeWidth = 14f
-                }
-                outlinePaint.style = Paint.Style.STROKE
-                outlinePaint.strokeCap = Paint.Cap.ROUND
-                setOnClickListener { poly, _, _ -> selectRoute(poly as Polyline, routeResult, allPotholes); true }
-            }
-            routeOverlays.add(polyline)
-            map.overlays.add(polyline)
+        
+        val intent = Intent(this, RouteAnalysisActivity::class.java).apply {
+            putParcelableArrayListExtra("ALL_ROUTES", ArrayList(routes))
         }
-        map.invalidate()
+        analysisLauncher.launch(intent)
     }
 
     private fun selectRoute(selected: Polyline, data: com.roadwise.routing.RouteResult, allPotholes: List<PotholeData>) {
-        routeOverlays.forEach { poly ->
-            if (poly == selected) { poly.outlinePaint.color = Color.parseColor("#3B82F6"); poly.outlinePaint.alpha = 255; poly.outlinePaint.strokeWidth = 18f; updateQualityLabel(allPotholes, data.distanceMeters) }
-            else { poly.outlinePaint.color = Color.parseColor("#94A3B8"); poly.outlinePaint.alpha = 200; poly.outlinePaint.strokeWidth = 14f }
+        val intent = Intent(this, RouteAnalysisActivity::class.java).apply {
+            putParcelableArrayListExtra("ALL_ROUTES", ArrayList(currentRoutes))
+            putExtra("SELECTED_INDEX", currentRoutes.indexOf(data))
         }
-        map.overlays.remove(selected); map.overlays.add(selected); map.invalidate()
+        analysisLauncher.launch(intent)
+        clearRouteFromMap()
     }
 
-    private fun updateQualityLabel(allPotholes: List<PotholeData>, distanceMeters: Double) {
-        val density = allPotholes.size / (distanceMeters / 1000.0)
-        binding.qualityValue.text = when {
-            density < 0.5 -> "EXCELLENT"; density < 1.5 -> "GREAT"; density < 3.0 -> "GOOD"; density < 5.0 -> "FAIR"; else -> "HAZARDOUS"
+    private fun clearRouteFromMap() {
+        routeOverlays.forEach { map.overlays.remove(it) }
+        routeOverlays.clear()
+        destinationMarker?.let { map.overlays.remove(it); destinationMarker = null }
+        map.invalidate()
+    }
+
+    private var isInNavigationMode = false
+
+    private fun startNavigation(route: RouteResult) {
+        isInNavigationMode = true
+        binding.navPanel.visibility = View.VISIBLE
+        binding.statsCard.visibility = View.GONE
+        binding.searchCard.visibility = View.GONE
+        binding.bottomNavCard.visibility = View.GONE
+        
+        // Draw the selected route
+        val polyline = Polyline().apply {
+            setPoints(route.points)
+            outlinePaint.color = Color.parseColor("#00E0FF")
+            outlinePaint.strokeWidth = 22f
+            outlinePaint.strokeCap = Paint.Cap.ROUND
         }
+        routeOverlays.add(polyline)
+        map.overlays.add(polyline)
+        
+        // Zoom to start and follow
+        map.controller.animateTo(route.points.first(), 18.0, 1000L)
+        
+        val marker = Marker(map).apply {
+            position = route.points.last()
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            icon = androidx.core.content.ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_location_pin)?.apply {
+                setTint(Color.parseColor("#FF3B30"))
+            }
+            title = "Destination"
+        }
+        destinationMarker = marker
+        map.overlays.add(marker)
+        map.invalidate()
+    }
+
+    private fun exitNavigation() {
+        isInNavigationMode = false
+        binding.navPanel.visibility = View.GONE
+        binding.statsCard.visibility = View.VISIBLE
+        binding.searchCard.visibility = View.VISIBLE
+        binding.bottomNavCard.visibility = View.VISIBLE
+        clearRouteFromMap()
+    }
+
+    private fun calculateRouteStats(route: com.roadwise.routing.RouteResult, allPotholes: List<PotholeData>): Triple<Int, Int, String> {
+        var potholes = 0
+        var bumps = 0
+        
+        for (p in allPotholes) {
+            // Check if pothole is within 50 meters of any point on the route
+            for (point in route.points) {
+                if (point.distanceToAsDouble(p.location) < 50.0) {
+                    if (p.type == RoadFeature.POTHOLE) potholes++ else bumps++
+                    break // count once per hazard
+                }
+            }
+        }
+        
+        val totalHazards = potholes + bumps
+        val density = totalHazards / (route.distanceMeters / 1000.0)
+        val quality = when {
+            density < 0.5 -> "EXCELLENT"
+            density < 1.5 -> "GREAT"
+            density < 3.0 -> "GOOD"
+            density < 5.0 -> "FAIR"
+            else -> "HAZARDOUS"
+        }
+        
+        return Triple(potholes, bumps, quality)
     }
 
     // ── Adaptive Overlay ───────────────────────────────────────────────────────
@@ -501,7 +606,7 @@ class MainActivity : AppCompatActivity() {
         adaptiveOverlay = AdaptiveRoadOverlay(this, PotholeRepository)
         adaptiveOverlay.refresh()
         map.overlays.add(adaptiveOverlay)
-        binding.gradeLegend.visibility = View.GONE
+        // binding.gradeLegend?.visibility = View.GONE
     }
 
     // ── Simulator / Heatmap ────────────────────────────────────────────────────
@@ -525,7 +630,7 @@ class MainActivity : AppCompatActivity() {
     private fun addHeatmapPoint(data: PotholeData) {
         if (!::map.isInitialized) return
         
-        val baseColor = if (data.type == RoadFeature.SPEED_BUMP) Color.parseColor("#2DD4BF") else Color.parseColor("#FBBF24")
+        val baseColor = if (data.type == RoadFeature.SPEED_BUMP) Color.parseColor("#00FFC2") else Color.parseColor("#FFD700")
 
         val pinMarker = Marker(map)
         pinMarker.position = data.location
@@ -535,7 +640,10 @@ class MainActivity : AppCompatActivity() {
             pinMarker.icon = icon 
         }
         pinMarker.title   = "${data.severity.name} ${data.type.name}"
-        pinMarker.snippet = "Intensity: ${"%.1f".format(data.intensity)}g\nTime: ${java.text.SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(data.timestamp))}"
+        
+        val sdf = java.text.SimpleDateFormat("MMM dd, yyyy · HH:mm:ss", Locale.getDefault())
+        pinMarker.snippet = "Recorded: ${sdf.format(Date(data.timestamp))}\nIntensity: ${"%.1f".format(data.intensity)}g"
+        
         map.overlays.add(pinMarker)
         map.invalidate()
     }
@@ -547,18 +655,95 @@ class MainActivity : AppCompatActivity() {
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleFocusIntent(intent)
+    }
+
+    private fun handleFocusIntent(intent: Intent?) {
+        val lat = intent?.getDoubleExtra("FOCUS_LAT", 0.0) ?: 0.0
+        val lon = intent?.getDoubleExtra("FOCUS_LON", 0.0) ?: 0.0
+        if (lat != 0.0 && lon != 0.0) {
+            val focusPoint = GeoPoint(lat, lon)
+            binding.map.postDelayed({
+                map.controller.animateTo(focusPoint)
+                map.controller.setZoom(20.0)
+            }, 300)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        if (::map.isInitialized) {
+            map.onResume()
+            refreshMarkers()
+        }
+        
+        // Sync monitoring toggle with prefs (could have changed via notification)
+        val isMonitoringEnabled = sharedPrefs.getBoolean("pref_monitoring_enabled", true)
+        if (binding.toggleMonitoring.isChecked != isMonitoringEnabled) {
+            binding.toggleMonitoring.isChecked = isMonitoringEnabled
+            if (isMonitoringEnabled) {
+                bumpDetector.start()
+                startSwitchPulse()
+            } else {
+                bumpDetector.stop()
+                stopSwitchPulse()
+            }
+        }
+        
         updateNavForRole()  // Refresh nav state after returning from any activity
+    }
+
+    private fun refreshMarkers() {
+        if (!::map.isInitialized) return
+        
+        // Remove all markers except location and destination
+        map.overlays.removeAll { it is Marker && it != locationOverlay && it != destinationMarker }
+        
+        val allDetections = PotholeRepository.getAllPotholes(this)
+        allDetections.forEach { addHeatmapPoint(it) }
+        
+        verifiedPotholeCount = allDetections.count { it.type == RoadFeature.POTHOLE }
+        binding.potholeCount.text = verifiedPotholeCount.toString()
+        
+        if (::adaptiveOverlay.isInitialized) adaptiveOverlay.refresh()
+        map.invalidate()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::map.isInitialized) map.onPause()
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun startSwitchPulse() {
+        if (switchPulseAnimator != null) return
+        switchPulseAnimator = ValueAnimator.ofFloat(1.0f, 0.4f).apply {
+            duration = 1000
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            addUpdateListener { animator ->
+                binding.toggleMonitoring.alpha = animator.animatedValue as Float
+            }
+            start()
+        }
+    }
+
+    private fun stopSwitchPulse() {
+        switchPulseAnimator?.cancel()
+        switchPulseAnimator = null
+        binding.toggleMonitoring.alpha = 1.0f
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        if (::bumpDetector.isInitialized) bumpDetector.stop()
+        if (::map.isInitialized) map.onDetach()
+        if (::bumpDetector.isInitialized) bumpDetector.close()
         if (::safetyAlertManager.isInitialized) safetyAlertManager.shutdown()
     }
 

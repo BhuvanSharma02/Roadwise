@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&amp;family=JetBrains+Mono:wght@700&amp;family=Space+Grotesk:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0e0e0e;
+            color: #e2e2e2;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(40px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .neon-glow-emerald {
+            box-shadow: 0 0 15px rgba(0, 255, 194, 0.2);
+        }
+        .neon-glow-amber {
+            box-shadow: 0 0 15px rgba(255, 219, 60, 0.2);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed-variant": "#004e5a",
+                      "on-surface": "#e2e2e2",
+                      "surface-container": "#1f1f1f",
+                      "on-background": "#e2e2e2",
+                      "secondary-fixed": "#ffe16d",
+                      "surface-container-highest": "#353535",
+                      "surface-variant": "#353535",
+                      "error-container": "#93000a",
+                      "surface-container-low": "#1b1b1b",
+                      "surface": "#131313",
+                      "primary-fixed": "#36ffc4",
+                      "on-tertiary-fixed": "#001f25",
+                      "on-tertiary": "#00363f",
+                      "on-secondary": "#3a3000",
+                      "inverse-on-surface": "#303030",
+                      "on-secondary-fixed-variant": "#544600",
+                      "secondary-fixed-dim": "#e9c400",
+                      "on-primary-fixed": "#002116",
+                      "surface-dim": "#131313",
+                      "tertiary": "#fcfeff",
+                      "tertiary-container": "#9fedff",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-primary-container": "#007255",
+                      "secondary": "#fff9ef",
+                      "on-primary-fixed-variant": "#00513c",
+                      "inverse-primary": "#006c50",
+                      "surface-container-high": "#2a2a2a",
+                      "secondary-container": "#ffdb3c",
+                      "surface-tint": "#00e1ab",
+                      "on-error": "#690005",
+                      "inverse-surface": "#e2e2e2",
+                      "background": "#131313",
+                      "outline": "#83958c",
+                      "outline-variant": "#3a4a43",
+                      "error": "#ffb4ab",
+                      "tertiary-fixed-dim": "#00daf8",
+                      "primary-fixed-dim": "#00e1ab",
+                      "surface-bright": "#393939",
+                      "on-primary": "#003828",
+                      "on-tertiary-container": "#006e7e",
+                      "tertiary-fixed": "#a5eeff",
+                      "on-secondary-fixed": "#221b00",
+                      "on-secondary-container": "#725f00",
+                      "on-surface-variant": "#b9cbc1",
+                      "primary-container": "#00ffc2",
+                      "primary": "#fbfffa",
+                      "on-error-container": "#ffdad6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "unit-1": "4px",
+                      "base": "4px",
+                      "unit-4": "16px",
+                      "unit-12": "48px",
+                      "unit-2": "8px",
+                      "unit-6": "24px",
+                      "safe-margin": "24px",
+                      "unit-8": "32px"
+              },
+              "fontFamily": {
+                      "data-speed": ["JetBrains Mono"],
+                      "label-caps": ["Space Grotesk"],
+                      "headline-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "display-hero": ["Inter"]
+              },
+              "fontSize": {
+                      "data-speed": ["64px", {"lineHeight": "1.0", "fontWeight": "700"}],
+                      "label-caps": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                      "headline-lg": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "display-hero": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-slate-950/80 backdrop-blur-[40px] border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+<div class="flex items-center gap-3 active:scale-95 duration-200 cursor-pointer">
+<span class="material-symbols-outlined text-[#00FFC2]" style="font-variation-settings: 'FILL' 1;">sensors</span>
+<span class="font-['Inter'] uppercase tracking-widest font-black text-[#00FFC2] italic text-xl tracking-tighter drop-shadow-[0_0_10px_rgba(0,255,194,0.4)]">ROADWISE</span>
+</div>
+<div class="w-10 h-10 rounded-full border border-[#00FFC2]/30 overflow-hidden active:scale-95 duration-200">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Modern minimalist portrait of a man with clean studio lighting and high contrast aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsP8_YtqAWLbyEoB4AHsKANRYlXDov0mscVlpVvbvEjk4AhEkxaLVHAoF6-ZWmRx59DlddRpGjUfbS0jDSv8O0ySdVMb_bivmP5iLT2askOwSzbC5kV9BBYKAdD4B9kNU-e_bNO5MfwaWBS9rCoS26xYK7QUFasOeYxc2ZVAE81hY7HYiYKsW_WKcfkcl6yjvgpUxe5o5SvpgpKU52E3gUUZ_drtPAQFILKPzkAtMTaTfDVjdvom1klPRDLNkU5MwFL1tlXmR8Fa4"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-32 px-safe-margin max-w-lg mx-auto">
+<header class="mb-8">
+<div class="flex items-center gap-2 mb-2">
+<span class="h-[2px] w-8 bg-primary-container"></span>
+<span class="font-label-caps text-label-caps text-primary-container">ANALYTICS ENGINE</span>
+</div>
+<h1 class="font-display-hero text-display-hero text-on-surface mb-2">Drive History</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Review your last 30 days of road performance.</p>
+</header>
+<!-- Stats Overview Bento Section -->
+<section class="grid grid-cols-2 gap-4 mb-8">
+<div class="glass-panel p-unit-4 rounded-xl border-l-2 border-[#00FFC2] neon-glow-emerald">
+<span class="font-label-caps text-[10px] text-on-surface-variant block mb-1">TOTAL DISTANCE</span>
+<div class="flex items-baseline gap-1">
+<span class="font-data-speed text-2xl text-[#00FFC2]">1,284</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant">KM</span>
+</div>
+</div>
+<div class="glass-panel p-unit-4 rounded-xl border-l-2 border-secondary-container neon-glow-amber">
+<span class="font-label-caps text-[10px] text-on-surface-variant block mb-1">ALERTS LOGGED</span>
+<div class="flex items-baseline gap-1">
+<span class="font-data-speed text-2xl text-secondary-container">12</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant">INCIDENTS</span>
+</div>
+</div>
+</section>
+<!-- History List -->
+<div class="space-y-4">
+<!-- Entry 1: High Hazard (Amber) -->
+<div class="glass-panel p-6 rounded-xl relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
+<div class="absolute top-0 right-0 p-2">
+<span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded-full font-label-caps text-[8px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+                        CAUTION
+                    </span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">OCT 24, 2023</h3>
+<p class="font-label-caps text-[10px] text-on-surface-variant mt-1">DOWNTOWN TO AIRPORT</p>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">DURATION</span>
+<div class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="font-data-speed text-lg">42m</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">HAZARDS</span>
+<div class="flex items-center gap-1 text-secondary-container">
+<span class="material-symbols-outlined text-sm">report_problem</span>
+<span class="font-data-speed text-lg">07</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Entry 2: Safe Session (Emerald) -->
+<div class="glass-panel p-6 rounded-xl relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
+<div class="absolute top-0 right-0 p-2">
+<span class="bg-primary-container text-on-primary-container px-2 py-1 rounded-full font-label-caps text-[8px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        OPTIMAL
+                    </span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">OCT 22, 2023</h3>
+<p class="font-label-caps text-[10px] text-on-surface-variant mt-1">SUBURBAN COMMUTE</p>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">DURATION</span>
+<div class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="font-data-speed text-lg">18m</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">HAZARDS</span>
+<div class="flex items-center gap-1 text-primary-container">
+<span class="material-symbols-outlined text-sm">verified</span>
+<span class="font-data-speed text-lg">00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Entry 3: Safe Session (Emerald) -->
+<div class="glass-panel p-6 rounded-xl relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
+<div class="absolute top-0 right-0 p-2">
+<span class="bg-primary-container text-on-primary-container px-2 py-1 rounded-full font-label-caps text-[8px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        OPTIMAL
+                    </span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">OCT 21, 2023</h3>
+<p class="font-label-caps text-[10px] text-on-surface-variant mt-1">NIGHT RUN</p>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">DURATION</span>
+<div class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="font-data-speed text-lg">55m</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">HAZARDS</span>
+<div class="flex items-center gap-1 text-primary-container">
+<span class="material-symbols-outlined text-sm">verified</span>
+<span class="font-data-speed text-lg">02</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Entry 4: High Hazard (Amber) -->
+<div class="glass-panel p-6 rounded-xl relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
+<div class="absolute top-0 right-0 p-2">
+<span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded-full font-label-caps text-[8px] flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+                        CAUTION
+                    </span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">OCT 19, 2023</h3>
+<p class="font-label-caps text-[10px] text-on-surface-variant mt-1">INTERSTATE 95</p>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">DURATION</span>
+<div class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="font-data-speed text-lg">2h 10m</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-on-surface-variant mb-1">HAZARDS</span>
+<div class="flex items-center gap-1 text-secondary-container">
+<span class="material-symbols-outlined text-sm">report_problem</span>
+<span class="font-data-speed text-lg">14</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-black border-t border-white/5 shadow-[0_-10px_20px_rgba(0,0,0,0.8)] z-50">
+<button class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-95 duration-200">
+<span class="material-symbols-outlined">speed</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider mt-1">HUD</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-95 duration-200">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider mt-1">Hazards</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#00FFC2] drop-shadow-[0_0_12px_rgba(0,255,194,0.6)] active:scale-110 duration-300">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider mt-1">History</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-95 duration-200">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider mt-1">Settings</span>
+</button>
+</nav>
+</body></html>

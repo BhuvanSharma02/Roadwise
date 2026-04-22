@@ -1,23 +1,25 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.RoadWise" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/neon_primary</item>
-        <item name="colorPrimaryVariant">@color/neon_primary_dim</item>
-        <item name="colorOnPrimary">@color/neon_background</item>
-        <item name="colorSecondary">@color/brand_amber</item>
-        <item name="colorSecondaryVariant">@color/brand_amber_dark</item>
+        <!-- Core Colors -->
+        <item name="colorPrimary">@color/emerald_neon</item>
+        <item name="colorPrimaryVariant">@color/emerald_neon</item>
+        <item name="colorOnPrimary">@color/obsidian_background</item>
+        <item name="colorSecondary">@color/electric_gold</item>
+        <item name="colorSecondaryVariant">@color/electric_gold</item>
         <item name="colorOnSecondary">@color/black</item>
         
-        <item name="android:colorBackground">@color/neon_background_lowest</item>
-        <item name="colorSurface">@color/neon_surface</item>
-        <item name="colorOnBackground">@color/neon_text_high</item>
-        <item name="colorOnSurface">@color/neon_text_high</item>
+        <item name="android:colorBackground">@color/obsidian_lowest</item>
+        <item name="colorSurface">@color/obsidian_background</item>
+        <item name="colorOnBackground">@color/text_high</item>
+        <item name="colorOnSurface">@color/text_high</item>
 
+        <!-- Custom Attributes -->
         <item name="glassSurface">@color/glass_surface</item>
         <item name="glassSurfaceDeep">@color/glass_surface_deep</item>
-        <item name="glassBorder">@color/glass_ghost_border</item>
-        <item name="textFaded">@color/neon_text_med</item>
+        <item name="glassBorder">@color/glass_border</item>
+        <item name="textFaded">@color/text_med</item>
 
-        <item name="android:statusBarColor">@color/neon_background_lowest</item>
+        <item name="android:statusBarColor">@color/obsidian_lowest</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
     </style>
 

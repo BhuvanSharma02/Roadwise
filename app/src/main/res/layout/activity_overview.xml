@@ -97,7 +97,7 @@
                         android:text="0"
                         android:textSize="28sp"
                         android:fontFamily="sans-serif-bold"
-                        android:textColor="@color/brand_amber" />
+                        android:textColor="@color/electric_gold" />
                 </LinearLayout>
 
                 <View
@@ -261,7 +261,7 @@
         android:id="@+id/overviewProgress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:indeterminateTint="@color/brand_teal"
+        android:indeterminateTint="@color/emerald_neon"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

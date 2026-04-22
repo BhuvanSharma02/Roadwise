@@ -41,9 +41,7 @@ class HistoryActivity : AppCompatActivity() {
         binding = ActivityHistoryBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnClickListener { finish() }
 
         setupRecyclerView()
 
@@ -54,7 +52,7 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        val potholes = PotholeRepository.getAllPotholes(this).reversed()
+        val potholes = PotholeRepository.getAllPotholes(this)
         
         adapter = PotholeAdapter(
             potholes,
@@ -113,7 +111,7 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun refreshList() {
-        val potholes = PotholeRepository.getAllPotholes(this).reversed()
+        val potholes = PotholeRepository.getAllPotholes(this)
         adapter.updateData(potholes)
         updateSummaryChips(potholes)
         updateEmptyState(potholes.isEmpty())
@@ -129,6 +127,7 @@ class HistoryActivity : AppCompatActivity() {
         val tvIntensity = view.findViewById<TextView>(R.id.tvIntensityValue)
         val photosContainer = view.findViewById<LinearLayout>(R.id.photosContainer)
         val btnExport = view.findViewById<View>(R.id.btnExportSingle)
+        val btnViewOnMap = view.findViewById<View>(R.id.btnViewOnMap)
 
         tvType.text = formatType(pothole)
         tvLocation.text = formatCoords(pothole)
@@ -141,6 +140,16 @@ class HistoryActivity : AppCompatActivity() {
         btnExport.setOnClickListener {
             generatePdf(listOf(pothole), "RoadWise_Pothole_${pothole.timestamp}")
             dialog.dismiss()
+        }
+
+        btnViewOnMap.setOnClickListener {
+            dialog.dismiss()
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra("FOCUS_LAT", pothole.location.latitude)
+                putExtra("FOCUS_LON", pothole.location.longitude)
+            }
+            startActivity(intent)
         }
 
         dialog.setContentView(view)

@@ -11,6 +11,7 @@ import android.os.Looper
 import android.util.Log
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
 import com.roadwise.MainActivity
 import com.roadwise.R
@@ -47,6 +48,12 @@ class DriveGuardService : Service() {
             { currentSpeedKmh },
             { type, intensity ->
                 // Registered from background
+                val isMonitoringEnabled = sharedPrefs.getBoolean("pref_monitoring_enabled", true)
+                if (!isMonitoringEnabled) {
+                    Log.d("DriveGuardService", "Passive mode: skipping record for $type")
+                    return@BumpDetector
+                }
+
                 val lastLoc = lastLocation
                 if (lastLoc != null) {
                     val severity = com.roadwise.utils.Severity.MEDIUM // Background default
@@ -114,10 +121,17 @@ class DriveGuardService : Service() {
 
     private fun buildNotification(speed: Int): Notification {
         val stopIntent = Intent(this, DriveGuardService::class.java).apply {
-            action = "STOP_SERVICE"
+            action = ACTION_STOP
         }
         val stopPendingIntent = PendingIntent.getService(
             this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val toggleIntent = Intent(this, DriveGuardService::class.java).apply {
+            action = ACTION_TOGGLE_MONITORING
+        }
+        val togglePendingIntent = PendingIntent.getService(
+            this, 1, toggleIntent, PendingIntent.FLAG_IMMUTABLE
         )
 
         val mainIntent = Intent(this, MainActivity::class.java)
@@ -125,11 +139,17 @@ class DriveGuardService : Service() {
             this, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE
         )
 
+        val isMonitoring = sharedPrefs.getBoolean("pref_monitoring_enabled", true)
+        val statusText = if (isMonitoring) "RECORDING ACTIVE" else "PASSIVE (ALERTS ONLY)"
+        val toggleLabel = if (isMonitoring) "GO PASSIVE" else "START RECORDING"
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("RoadWise Monitoring Active")
-            .setContentText("Speed: $speed km/h • Hazards Detected: $detectionCount")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation) 
+            .setContentTitle("RoadWise: $statusText")
+            .setContentText("Speed: $speed km/h • Hazards Saved: $detectionCount")
+            .setSmallIcon(if (isMonitoring) R.drawable.ic_drive else android.R.drawable.ic_menu_mylocation) 
             .setContentIntent(mainPendingIntent)
+            .setColor(ContextCompat.getColor(this, R.color.emerald_neon))
+            .addAction(android.R.drawable.ic_menu_compass, toggleLabel, togglePendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "STOP", stopPendingIntent)
             .setOngoing(true)
             .build()
@@ -142,17 +162,28 @@ class DriveGuardService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            "STOP_SERVICE" -> {
+            ACTION_STOP -> {
                 Log.i("DriveGuardService", "Stop action received.")
                 stopSelf()
                 return START_NOT_STICKY
             }
-            "START_SERVICE" -> {
-                Log.i("DriveGuardService", "Start action received from notification.")
-                // Service is already starting via onCreate, but we can log it
+            ACTION_TOGGLE_MONITORING -> {
+                val current = sharedPrefs.getBoolean("pref_monitoring_enabled", true)
+                sharedPrefs.edit().putBoolean("pref_monitoring_enabled", !current).apply()
+                updateNotification(currentSpeedKmh)
+                Log.i("DriveGuardService", "Monitoring toggled to ${!current}")
+            }
+            ACTION_START -> {
+                Log.i("DriveGuardService", "Start action received.")
             }
         }
         return START_STICKY
+    }
+
+    companion object {
+        const val ACTION_START = "START_SERVICE"
+        const val ACTION_STOP = "STOP_SERVICE"
+        const val ACTION_TOGGLE_MONITORING = "TOGGLE_MONITORING"
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

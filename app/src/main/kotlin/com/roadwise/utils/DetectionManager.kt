@@ -14,7 +14,7 @@ class DetectionManager(private val onVerifiedFeature: (RoadFeature, Severity, Fl
     private var lockoutUntil: Long = 0
     private val LOCKOUT_DURATION_MS = 1000L // Increased lockout to prevent double detections
 
-    fun onCameraDetection(confidence: Float, bitmaps: List<Bitmap>) {
+    fun onCameraDetection(_: Float, __: List<Bitmap>) {
         // Camera logic is now secondary, we can ignore it for sensor truth
     }
 
@@ -25,10 +25,11 @@ class DetectionManager(private val onVerifiedFeature: (RoadFeature, Severity, Fl
             return
         }
 
-        // 1. Calculate Severity based on README.md standards (G-force intensity)
+        // 1. Calculate Severity based on G-force intensity
+        // A low severity bump is < 0.5G. A medium is < 0.8G.
         val severity = when {
-            intensity < 5.0f -> Severity.LOW
-            intensity < 8.0f -> Severity.MEDIUM
+            intensity < 0.5f -> Severity.LOW
+            intensity < 0.8f -> Severity.MEDIUM
             else -> Severity.HIGH
         }
 

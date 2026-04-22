@@ -19,8 +19,10 @@ class BumpDetector(
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+    private val gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
     
     private val model = RoadModelInference(context)
+    private val lastGravity = floatArrayOf(0f, 0f, 9.81f)
 
     // ML Model Parameters: 40 samples @ 20Hz = 2 seconds
     private val windowSize = 40
@@ -38,19 +40,29 @@ class BumpDetector(
 
     fun start() {
         accelerometer?.let {
-            // SENSOR_DELAY_GAME is roughly 20ms (50Hz), we need 20Hz (50ms)
-            // We can specify the delay in microseconds: 50,000us = 20Hz
+            // We request 50,000us (20Hz)
+            sensorManager.registerListener(this, it, 50000)
+        }
+        gravitySensor?.let {
             sensorManager.registerListener(this, it, 50000)
         }
     }
 
     fun stop() {
         sensorManager.unregisterListener(this)
+    }
+
+    fun close() {
+        stop()
         model.close()
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_LINEAR_ACCELERATION) {
+        if (event == null) return
+        
+        if (event.sensor.type == Sensor.TYPE_GRAVITY) {
+            System.arraycopy(event.values, 0, lastGravity, 0, 3)
+        } else if (event.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION) {
             val currentSpeed = getCurrentSpeedKmh()
 
             // Only monitor if the vehicle is moving at a reasonable speed
@@ -59,10 +71,24 @@ class BumpDetector(
                 return
             }
 
-            // Convert to G-force (m/s^2 -> G)
-            xHistory[writeIndex] = event.values[0] / 9.81f
-            yHistory[writeIndex] = event.values[1] / 9.81f
-            zHistory[writeIndex] = event.values[2] / 9.81f
+            val ax = event.values[0]
+            val ay = event.values[1]
+            val az = event.values[2]
+
+            val gx = lastGravity[0]
+            val gy = lastGravity[1]
+            val gz = lastGravity[2]
+
+            val gMag = sqrt(gx * gx + gy * gy + gz * gz)
+            if (gMag < 0.1f) return
+
+            // Project linear acceleration onto gravity vector to get true vertical (Earth Z)
+            val zEarth = (ax * gx + ay * gy + az * gz) / gMag
+
+            // Keep in m/s^2 (matching training data) instead of converting to G-force
+            xHistory[writeIndex] = ax
+            yHistory[writeIndex] = ay
+            zHistory[writeIndex] = zEarth
 
             writeIndex = (writeIndex + 1) % windowSize
             samplesCount++
@@ -76,19 +102,28 @@ class BumpDetector(
 
     private fun analyzeWindow() {
         val currentTime = System.currentTimeMillis()
-        // Cooldown to prevent multiple detections of the same physical event
-        if (currentTime - lastEventTime < 1500) return
+        // Cooldown to prevent multiple detections of the same physical event (Matching training app 3s)
+        if (currentTime - lastEventTime < 3000) return
 
         // 1. Extract 12 Features
         val features = extract12Features()
         
-        // 2. Run ML Inference
-        val prediction = model.predict(features)
+        // 2. Filter physical events first: ensure the peak crosses impact threshold 1.2 m/s^2
+        val zMax = features[2]
+        val zMin = features[3]
+        val magnitude = max(zMax, -zMin)
+        if (magnitude < 1.2f) return
         
-        // 3. Extract Impact Magnitude (Peak-to-Peak Gs for vertical axis)
-        val impactMagnitude = features[4] // z_peak_to_peak is at index 4
+        // 3. Run ML Inference
+        val (prediction, confidence) = model.predict(features)
+        
+        // 4. Require High Confidence (0.70f) matching training app
+        if (confidence < 0.70f) return
+        
+        // 5. Extract Impact Magnitude (Convert m/s^2 peak-to-peak to Gs for UI)
+        val impactMagnitude = features[4] / 9.81f
 
-        // 4. Handle Results (Filtering Smooth Road as requested)
+        // 6. Handle Results (Filtering Smooth Road as requested)
         when (prediction) {
             1 -> { // SPEED_BUMP
                 onFeatureDetected(RoadFeature.SPEED_BUMP, impactMagnitude)
@@ -146,15 +181,18 @@ class BumpDetector(
         // Skewness & Kurtosis
         var skewSum = 0f
         var kurtSum = 0f
-        if (zStd > 1e-6) {
+        if (zStd > 1e-6f) {
             for (v in zFiltered) {
                 val diff = (v - zMean) / zStd
                 skewSum += diff.pow(3)
                 kurtSum += diff.pow(4)
             }
         }
-        val zSkew = (skewSum / windowSize)
-        val zKurt = (kurtSum / windowSize)
+        val n = windowSize.toFloat()
+        // Matching exact Pearson Skewness formulation from training app
+        val zSkew = if (n > 2f) (n / ((n - 1f) * (n - 2f)) * skewSum) else 0f
+        // Matching exact Excess Kurtosis formulation (- 3.0) from training app
+        val zKurt = (kurtSum / n) - 3.0f
 
         return floatArrayOf(
             zMean, zStd, zMax, zMin, zP2P, zRms, 

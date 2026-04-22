@@ -3,33 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/neon_background_lowest">
+    android:background="@color/obsidian_lowest">
 
-    <!-- Teal ambient glow (top-center) -->
+    <!-- ══ Neon ambient glow top ══ -->
     <View
-        android:layout_width="350dp"
-        android:layout_height="350dp"
-        android:alpha="0.12"
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:alpha="0.06"
         android:background="@drawable/circle_indicator"
-        android:backgroundTint="@color/brand_teal"
+        android:backgroundTint="@color/emerald_neon"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintVertical_bias="0.15" />
-
-    <!-- Amber ambient glow (bottom-right) -->
-    <View
-        android:id="@+id/amberGlow"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:alpha="0.08"
-        android:background="@drawable/circle_indicator"
-        android:backgroundTint="@color/brand_amber"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.1"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <!-- Back button -->
+    <!-- ══ Back Button ══ -->
     <ImageButton
         android:id="@+id/btnBack"
         android:layout_width="44dp"
@@ -38,26 +27,55 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_close"
         android:padding="10dp"
-        app:tint="@color/neon_text_med"
+        app:tint="@color/text_med"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Main content card — vertically centered with slight upward bias -->
+    <!-- ══ Wordmark ══ -->
+    <LinearLayout
+        android:id="@+id/brandRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="24dp"
+        android:layout_marginTop="20dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ROAD"
+            android:textColor="@color/text_high"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.1" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WISE"
+            android:textColor="@color/emerald_neon"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.1" />
+    </LinearLayout>
+
+    <!-- ══ Main Card ══ -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/loginCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="24dp"
-        app:cardBackgroundColor="@color/neon_surface"
+        android:layout_marginHorizontal="24dp"
+        app:cardBackgroundColor="@color/obsidian_background"
         app:cardCornerRadius="28dp"
-        app:cardElevation="16dp"
-        app:strokeColor="@color/glass_ghost_border"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/glass_border"
         app:strokeWidth="1dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.45">
+        app:layout_constraintVertical_bias="0.46">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -65,7 +83,7 @@
             android:orientation="vertical"
             android:padding="28dp">
 
-            <!-- Logo row -->
+            <!-- Logo + Title -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -76,16 +94,16 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    app:cardBackgroundColor="@color/neon_background_lowest"
+                    app:cardBackgroundColor="@color/glass_surface"
                     app:cardCornerRadius="14dp"
-                    app:strokeColor="@color/glass_ghost_border"
+                    app:strokeColor="@color/glass_border"
                     app:strokeWidth="1dp">
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:padding="11dp"
                         android:src="@drawable/ic_drive"
-                        app:tint="@color/brand_teal" />
+                        app:tint="@color/emerald_neon" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <LinearLayout
@@ -97,15 +115,15 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="RoadWise"
-                        android:textColor="@color/neon_text_high"
+                        android:textColor="@color/text_high"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        android:fontFamily="sans-serif-medium" />
+                        android:fontFamily="sans-serif-black" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Sign in to your account"
-                        android:textColor="@color/neon_text_med"
+                        android:text="Account authentication required"
+                        android:textColor="@color/text_low"
                         android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -118,19 +136,23 @@
                 android:layout_height="wrap_content"
                 android:hint="Email address"
                 android:layout_marginBottom="14dp"
-                app:boxStrokeColor="@color/brand_teal"
-                app:hintTextColor="@color/brand_teal"
+                app:boxStrokeColor="@color/emerald_neon"
+                app:hintTextColor="@color/text_low"
                 app:startIconDrawable="@drawable/ic_person"
-                app:startIconTint="@color/neon_text_med"
-                app:boxBackgroundColor="@color/neon_background">
+                app:startIconTint="@color/text_low"
+                app:boxBackgroundColor="@color/glass_surface"
+                app:boxCornerRadiusTopStart="14dp"
+                app:boxCornerRadiusTopEnd="14dp"
+                app:boxCornerRadiusBottomStart="14dp"
+                app:boxCornerRadiusBottomEnd="14dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etEmail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textEmailAddress"
-                    android:textColor="@color/neon_text_high"
-                    android:textColorHint="@color/neon_text_med"
+                    android:textColor="@color/text_high"
+                    android:textColorHint="@color/text_low"
                     android:imeOptions="actionNext" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -142,56 +164,77 @@
                 android:layout_height="wrap_content"
                 android:hint="Password"
                 android:layout_marginBottom="24dp"
-                app:boxStrokeColor="@color/brand_teal"
-                app:hintTextColor="@color/brand_teal"
+                app:boxStrokeColor="@color/emerald_neon"
+                app:hintTextColor="@color/text_low"
                 app:startIconDrawable="@drawable/ic_settings"
-                app:startIconTint="@color/neon_text_med"
+                app:startIconTint="@color/text_low"
                 app:passwordToggleEnabled="true"
-                app:boxBackgroundColor="@color/neon_background">
+                app:boxBackgroundColor="@color/glass_surface"
+                app:boxCornerRadiusTopStart="14dp"
+                app:boxCornerRadiusTopEnd="14dp"
+                app:boxCornerRadiusBottomStart="14dp"
+                app:boxCornerRadiusBottomEnd="14dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textPassword"
-                    android:textColor="@color/neon_text_high"
-                    android:textColorHint="@color/neon_text_med"
+                    android:textColor="@color/text_high"
+                    android:textColorHint="@color/text_low"
                     android:imeOptions="actionDone" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Login Button -->
+            <!-- Sign In Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLogin"
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
-                android:text="Sign In"
+                android:text="LOG IN"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.05"
-                app:backgroundTint="@color/brand_teal"
-                app:cornerRadius="14dp"
+                android:textColor="@color/obsidian_background"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.06"
+                app:backgroundTint="@color/emerald_neon"
+                app:cornerRadius="999dp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Sign Up Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSignUp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:text="CREATE ACCOUNT"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.06"
+                android:textColor="@color/emerald_neon"
+                app:strokeColor="@color/emerald_neon"
+                app:strokeWidth="1dp"
+                app:cornerRadius="999dp"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Error text -->
+            <!-- Error -->
             <TextView
                 android:id="@+id/tvError"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#EF4444"
+                android:textColor="#FF3B30"
                 android:textSize="12sp"
                 android:gravity="center"
                 android:visibility="gone"
                 android:text="" />
-
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Loading overlay -->
+    <!-- Loading Overlay -->
     <FrameLayout
         android:id="@+id/loadingOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#AA0A0E1A"
+        android:background="#CC0E0E0E"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -202,7 +245,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="center"
-            android:indeterminateTint="@color/brand_teal" />
+            android:indeterminateTint="@color/emerald_neon" />
     </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

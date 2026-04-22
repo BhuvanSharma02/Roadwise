@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RoadWise - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&amp;family=JetBrains+Mono:wght@700&amp;family=Space+Grotesk:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glow-emerald {
+            box-shadow: 0 0 15px rgba(0, 255, 194, 0.3);
+        }
+        .glass-panel {
+            background: rgba(31, 31, 31, 0.6);
+            backdrop-filter: blur(40px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0e0e0e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a4a43;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed-variant": "#004e5a",
+                      "on-surface": "#e2e2e2",
+                      "surface-container": "#1f1f1f",
+                      "on-background": "#e2e2e2",
+                      "secondary-fixed": "#ffe16d",
+                      "surface-container-highest": "#353535",
+                      "surface-variant": "#353535",
+                      "error-container": "#93000a",
+                      "surface-container-low": "#1b1b1b",
+                      "surface": "#131313",
+                      "primary-fixed": "#36ffc4",
+                      "on-tertiary-fixed": "#001f25",
+                      "on-tertiary": "#00363f",
+                      "on-secondary": "#3a3000",
+                      "inverse-on-surface": "#303030",
+                      "on-secondary-fixed-variant": "#544600",
+                      "secondary-fixed-dim": "#e9c400",
+                      "on-primary-fixed": "#002116",
+                      "surface-dim": "#131313",
+                      "tertiary": "#fcfeff",
+                      "tertiary-container": "#9fedff",
+                      "surface-container-lowest": "#0e0e0e",
+                      "on-primary-container": "#007255",
+                      "secondary": "#fff9ef",
+                      "on-primary-fixed-variant": "#00513c",
+                      "inverse-primary": "#006c50",
+                      "surface-container-high": "#2a2a2a",
+                      "secondary-container": "#ffdb3c",
+                      "surface-tint": "#00e1ab",
+                      "on-error": "#690005",
+                      "inverse-surface": "#e2e2e2",
+                      "background": "#131313",
+                      "outline": "#83958c",
+                      "outline-variant": "#3a4a43",
+                      "error": "#ffb4ab",
+                      "tertiary-fixed-dim": "#00daf8",
+                      "primary-fixed-dim": "#00e1ab",
+                      "surface-bright": "#393939",
+                      "on-primary": "#003828",
+                      "on-tertiary-container": "#006e7e",
+                      "tertiary-fixed": "#a5eeff",
+                      "on-secondary-fixed": "#221b00",
+                      "on-secondary-container": "#725f00",
+                      "on-surface-variant": "#b9cbc1",
+                      "primary-container": "#00ffc2",
+                      "primary": "#fbfffa",
+                      "on-error-container": "#ffdad6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "unit-1": "4px",
+                      "base": "4px",
+                      "unit-4": "16px",
+                      "unit-12": "48px",
+                      "unit-2": "8px",
+                      "unit-6": "24px",
+                      "safe-margin": "24px",
+                      "unit-8": "32px"
+              },
+              "fontFamily": {
+                      "data-speed": ["JetBrains Mono"],
+                      "label-caps": ["Space Grotesk"],
+                      "headline-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "display-hero": ["Inter"]
+              },
+              "fontSize": {
+                      "data-speed": ["64px", {"lineHeight": "1.0", "fontWeight": "700"}],
+                      "label-caps": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                      "headline-lg": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "display-hero": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen font-body-md">
+<!-- Top Navigation -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-slate-950/80 backdrop-blur-[40px] border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#00FFC2]" data-icon="sensors">sensors</span>
+<span class="font-['Inter'] uppercase tracking-widest font-black text-[#00FFC2] italic text-xl tracking-tighter drop-shadow-[0_0_10px_rgba(0,255,194,0.4)]">ROADWISE</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-white/20 flex items-center justify-center overflow-hidden">
+<img alt="User Profile" data-alt="minimalist user avatar profile silhouette against a dark geometric background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXUj0J2snXQhmGH537amPy71TcNPMBjQi1KVPgiPjyB94MBvihpgxTaJujZ-hgP0CZ2Cv65B25AZ-F38vAj0CPiWn0DkVfng0kOdEfq1an2TamcORz3fEY3U0ZVixiN3WxBjRW_RrxS2BH1gdldND8Mq1e7mu6U18Qi5huKab7ctXq4pgvdXQps15wnqEtb5cLmf9CmZj1eGTeVV0HbkGGLLt6YrqEzCaPiHnCRppEq4b2Epm8EgUz0dyAlITK-OgnkXa0lVbxzbE"/>
+</div>
+</header>
+<main class="pt-24 pb-32 px-safe-margin max-w-lg mx-auto">
+<!-- Settings Header -->
+<section class="mb-unit-8">
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-unit-2">Settings</h1>
+<p class="text-on-surface-variant font-body-md opacity-70">Configure your HUD and safety preferences.</p>
+</section>
+<!-- Monitoring Mode (Passive vs Active) -->
+<section class="mb-unit-8">
+<div class="flex items-center gap-2 mb-unit-4">
+<span class="material-symbols-outlined text-primary-container" data-icon="visibility">visibility</span>
+<h2 class="font-label-caps text-label-caps uppercase text-primary-container">MONITORING PROTOCOL</h2>
+</div>
+<div class="glass-panel p-unit-4 rounded-xl space-y-unit-4">
+<div class="flex items-center justify-between">
+<div>
+<p class="font-headline-lg text-body-md text-on-surface">Active Vigilance</p>
+<p class="text-[12px] text-on-surface-variant">Continuous camera processing for hazards</p>
+</div>
+<!-- Tactile Switch -->
+<div class="relative w-14 h-8 bg-surface-container-lowest rounded-full p-1 border border-outline-variant cursor-pointer">
+<div class="absolute right-1 w-6 h-6 bg-primary-container rounded-full glow-emerald"></div>
+</div>
+</div>
+<div class="h-[0.5px] bg-white/10"></div>
+<div class="flex items-center justify-between">
+<div>
+<p class="font-headline-lg text-body-md text-on-surface opacity-50">Passive Recording</p>
+<p class="text-[12px] text-on-surface-variant opacity-50">Background dashcam only</p>
+</div>
+<div class="relative w-14 h-8 bg-surface-container-lowest rounded-full p-1 border border-outline-variant cursor-pointer opacity-50">
+<div class="absolute left-1 w-6 h-6 bg-surface-container-highest rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Navigation Alerts -->
+<section class="mb-unit-8">
+<div class="flex items-center gap-2 mb-unit-4">
+<span class="material-symbols-outlined text-primary-container" data-icon="notifications_active">notifications_active</span>
+<h2 class="font-label-caps text-label-caps uppercase text-primary-container">NOTIFICATION SENSITIVITY</h2>
+</div>
+<div class="glass-panel p-unit-6 rounded-xl">
+<div class="mb-unit-6">
+<div class="flex justify-between mb-unit-2">
+<span class="text-label-caps text-on-surface-variant">ALERT THRESHOLD</span>
+<span class="font-data-speed text-[14px] text-primary-container">0.8s reaction</span>
+</div>
+<!-- Neon Slider -->
+<div class="relative w-full h-1 bg-surface-container-lowest rounded-full">
+<div class="absolute left-0 top-0 h-full w-3/4 bg-primary-container glow-emerald"></div>
+<div class="absolute left-3/4 top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-primary-container rounded-full ring-4 ring-primary-container/20"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-unit-4">
+<div class="bg-surface-container p-unit-3 rounded-lg border border-primary-container/20">
+<span class="material-symbols-outlined text-primary-container block mb-1" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+<p class="text-label-caps text-on-surface text-[10px]">COLLISION</p>
+<p class="text-primary-container font-bold">ON</p>
+</div>
+<div class="bg-surface-container p-unit-3 rounded-lg border border-white/5">
+<span class="material-symbols-outlined text-on-surface-variant block mb-1" data-icon="speed">speed</span>
+<p class="text-label-caps text-on-surface-variant text-[10px]">SPEEDING</p>
+<p class="text-on-surface-variant font-bold">OFF</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Map Appearance -->
+<section class="mb-unit-8">
+<div class="flex items-center gap-2 mb-unit-4">
+<span class="material-symbols-outlined text-primary-container" data-icon="map">map</span>
+<h2 class="font-label-caps text-label-caps uppercase text-primary-container">HUD VISUALS</h2>
+</div>
+<div class="grid grid-cols-1 gap-unit-4">
+<div class="glass-panel rounded-xl overflow-hidden">
+<div class="h-32 w-full bg-surface-container relative">
+<img alt="Map Preview" class="w-full h-full object-cover opacity-40" data-alt="top-down dark mode navigation map with neon cyan path lines and glowing points of interest on a black grid" data-location="Tokyo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEccRH0629SPCXkLao4GnS9f5CkGcUUvVL40Jrgvq6351-44e35oTJrbcUUITE4jSsQMYqTgN9ys3FoZ7olvYRjwXplUeMarUSpjHowDtT3b8lRuMeeSM3T0HTK2QgxlOmhVQaGGu2tvTDPXl-aUtLX68LEkrpMP4o9dX3r12hPxruw6ECD8p4Q9wetmV1C4zCbb9auy3JdnWawrWu-kecrr2FV1KqQag2g0-5pUFyd7MbOwlzW31f0fOPGHkyDrpYk_RLI8FPIaE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-primary-container text-background px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter">OLED OPTIMIZED</span>
+</div>
+</div>
+<div class="p-unit-4">
+<div class="flex justify-between items-center">
+<div>
+<p class="text-on-surface font-headline-lg text-body-md">Wireframe Map</p>
+<p class="text-[12px] text-on-surface-variant">High-contrast, low-distraction layout</p>
+</div>
+<div class="w-14 h-8 bg-surface-container-lowest rounded-full p-1 border border-outline-variant cursor-pointer">
+<div class="w-6 h-6 bg-primary-container rounded-full glow-emerald"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-panel p-unit-4 rounded-xl">
+<div class="flex justify-between items-center mb-unit-4">
+<p class="text-on-surface font-headline-lg text-body-md">Brightness</p>
+<span class="material-symbols-outlined text-secondary-fixed" data-icon="light_mode">light_mode</span>
+</div>
+<div class="relative w-full h-1 bg-surface-container-lowest rounded-full">
+<div class="absolute left-0 top-0 h-full w-1/2 bg-secondary-fixed"></div>
+<div class="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-secondary-fixed rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- System -->
+<section class="mb-unit-12">
+<button class="w-full py-unit-4 glass-panel rounded-xl border border-error/20 flex items-center justify-center gap-2 active:scale-95 duration-200">
+<span class="material-symbols-outlined text-error" data-icon="restart_alt">restart_alt</span>
+<span class="text-error font-label-caps">FACTORY RESET SENSORS</span>
+</button>
+<p class="text-center text-[10px] text-on-surface-variant mt-unit-4 opacity-40 font-data-speed uppercase">Firmware v2.4.0-neon</p>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-black border-t border-white/5 shadow-[0_-10px_20px_rgba(0,0,0,0.8)] z-50">
+<button class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-110 duration-300">
+<span class="material-symbols-outlined" data-icon="speed">speed</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">HUD</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-110 duration-300">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Hazards</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-110 duration-300">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">History</span>
+</button>
+<button class="flex flex-col items-center justify-center text-[#00FFC2] drop-shadow-[0_0_12px_rgba(0,255,194,0.6)] active:scale-110 duration-300">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Settings</span>
+</button>
+</nav>
+</body></html>

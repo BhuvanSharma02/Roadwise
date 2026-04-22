@@ -3,28 +3,36 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/colorSurface"
+    android:background="@color/obsidian_background"
     android:orientation="vertical"
-    android:paddingBottom="24dp">
+    android:paddingBottom="32dp">
 
     <!-- Drag Handle -->
     <View
-        android:layout_width="40dp"
+        android:layout_width="36dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="4dp"
         android:background="@drawable/circle_indicator"
-        android:backgroundTint="?attr/glassBorder" />
+        android:backgroundTint="@color/glass_border" />
 
-    <!-- Header Row: Type + Date -->
+    <!-- Neon top accent -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/glass_border"
+        android:layout_marginTop="8dp" />
+
+    <!-- ── HEADER ── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="24dp"
-        android:paddingTop="8dp">
+        android:paddingTop="20dp"
+        android:paddingBottom="16dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -32,92 +40,124 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
+            <!-- Label -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HAZARD DETECTED"
+                android:textColor="@color/text_low"
+                android:textSize="9sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.15" />
+
             <TextView
                 android:id="@+id/tvDetailType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Pothole"
-                android:textColor="?attr/colorSecondary"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:textColor="@color/electric_gold"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-black" />
 
             <TextView
                 android:id="@+id/tvDetailDateTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="2026-03-21 · 20:18"
-                android:textColor="?attr/textFaded"
-                android:textSize="13sp" />
+                android:text="OCT 24, 2023 · 20:18"
+                android:textColor="@color/text_low"
+                android:fontFamily="monospace"
+                android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- Intensity indicator chip -->
+        <!-- Intensity Chip -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/glassSurface"
-            app:cardCornerRadius="12dp"
-            app:strokeColor="?attr/glassBorder"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            app:cardBackgroundColor="@color/glass_surface"
+            app:cardCornerRadius="16dp"
+            app:strokeColor="@color/glass_border"
             app:strokeWidth="1dp">
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="6dp"
-                android:orientation="vertical"
-                android:gravity="center">
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="INTENSITY"
-                    android:textColor="?attr/textFaded"
-                    android:textSize="9sp"
-                    android:textStyle="bold"
+                    android:text="G-FORCE"
+                    android:textColor="@color/text_low"
+                    android:textSize="8sp"
+                    android:fontFamily="sans-serif-medium"
                     android:letterSpacing="0.1" />
                 <TextView
                     android:id="@+id/tvIntensityValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textColor="?attr/colorSecondary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textColor="@color/electric_gold"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
-
-    <!-- Location -->
-    <TextView
-        android:id="@+id/tvDetailLocation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:paddingHorizontal="24dp"
-        android:text="28.6139° N, 77.2090° E"
-        android:textColor="?attr/colorOnSurface"
-        android:textSize="14sp" />
 
     <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginHorizontal="24dp"
-        android:layout_marginVertical="16dp"
-        android:background="?attr/glassBorder" />
+        android:background="@color/glass_border" />
 
-    <!-- Photos Section Label -->
+    <!-- ── LOCATION DATA ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="16dp"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_my_location"
+            android:layout_marginEnd="8dp"
+            app:tint="@color/cyber_blue" />
+
+        <TextView
+            android:id="@+id/tvDetailLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="28.6139° N, 77.2090° E"
+            android:textColor="@color/cyber_blue"
+            android:fontFamily="monospace"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="24dp"
+        android:background="@color/glass_border" />
+
+    <!-- ── PHOTOS ── -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
+        android:layout_marginTop="16dp"
         android:layout_marginBottom="10dp"
         android:text="CAPTURED IMAGES"
-        android:textColor="?attr/textFaded"
-        android:textSize="11sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.1" />
+        android:textColor="@color/text_low"
+        android:textSize="9sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.15" />
 
-    <!-- Photos Scroll -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -131,21 +171,41 @@
             android:orientation="horizontal" />
     </HorizontalScrollView>
 
-    <!-- Export Button -->
+    <!-- ── ACTIONS ── -->
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnExportSingle"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:id="@+id/btnViewOnMap"
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:layout_marginHorizontal="24dp"
         android:layout_marginTop="20dp"
-        android:text="Export as PDF"
-        android:textColor="?attr/colorSecondary"
-        android:letterSpacing="0.05"
-        app:cornerRadius="14dp"
-        app:strokeColor="?attr/colorSecondary"
+        android:text="View on Map"
+        android:textColor="@color/emerald_neon"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.06"
+        app:cornerRadius="999dp"
+        app:strokeColor="@color/emerald_neon"
+        app:strokeWidth="1dp"
+        app:icon="@drawable/ic_location_pin"
+        app:iconTint="@color/emerald_neon"
+        app:iconGravity="textStart"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnExportSingle"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="10dp"
+        android:text="Export Report"
+        android:textColor="@color/electric_gold"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.06"
+        app:cornerRadius="999dp"
+        app:strokeColor="@color/electric_gold"
+        app:strokeWidth="1dp"
         app:icon="@drawable/ic_export"
-        app:iconTint="?attr/colorSecondary"
-        app:iconGravity="textStart" />
+        app:iconTint="@color/electric_gold"
+        app:iconGravity="textStart"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
 </LinearLayout>

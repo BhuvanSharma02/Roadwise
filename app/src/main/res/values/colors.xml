@@ -1,32 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand Accents -->
-    <color name="brand_amber">#FBBF24</color>
-    <color name="brand_amber_dark">#D97706</color>
-    <color name="brand_teal">#00E5FF</color> <!-- Now using Neon Cyan -->
-    <color name="brand_blue">#3B82F6</color>
+    <!-- Cyber-Sleek Neon Palette -->
+    <color name="obsidian_background">#131313</color>
+    <color name="obsidian_lowest">#0E0E0E</color>
+    <color name="emerald_neon">#00FFC2</color>
+    <color name="emerald_glow">#6600FFC2</color> <!-- 40% glow -->
+    <color name="electric_gold">#FFD700</color>
+    <color name="cyber_blue">#00E0FF</color>
     
-    <!-- Neon Navigator System -->
-    <color name="neon_background">#0F131F</color>
-    <color name="neon_background_lowest">#0A0E1A</color>
-    <color name="neon_surface">#1B1F2C</color>
-    <color name="neon_surface_high">#262A37</color>
-    <color name="neon_surface_highest">#313442</color>
-
-    <color name="neon_primary">#00E5FF</color>
-    <color name="neon_primary_dim">#00DAF3</color>
-
-    <!-- Typography Colors -->
-    <color name="neon_text_high">#DFE2F3</color>
-    <color name="neon_text_med">#BAC9CC</color>
+    <!-- Surface & Glassmorphism -->
+    <color name="glass_surface">#B3131313</color> <!-- 70% Obsidian -->
+    <color name="glass_surface_deep">#E6131313</color> <!-- 90% Obsidian -->
+    <color name="glass_border">#1AFFFFFF</color> <!-- 10% White -->
     
-    <!-- Borders and Accents -->
-    <color name="neon_outline">#3B494C</color> <!-- Ghost Border fallback -->
-    
-    <!-- Glassmorphism Tokens -->
-    <color name="glass_surface">#D91B1F2C</color> <!-- 85% opacity surface -->
-    <color name="glass_surface_deep">#E60F131F</color> <!-- 90% opacity deep background -->
-    <color name="glass_ghost_border">#333B494C</color> <!-- 20% opacity outline -->
+    <!-- Typography -->
+    <color name="text_high">#E2E2E2</color>
+    <color name="text_med">#B9CBC1</color>
+    <color name="text_low">#83958C</color>
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

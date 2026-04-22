@@ -47,10 +47,10 @@ class PotholeAdapter(
 
         // Type-specific theming: amber for potholes, teal for speed bumps
         val isSpeedBump = pothole.type == RoadFeature.SPEED_BUMP
-        val typeColor = if (isSpeedBump) R.color.brand_teal else {
+        val typeColor = if (isSpeedBump) R.color.emerald_neon else {
             when(pothole.severity) {
-                Severity.LOW -> R.color.brand_blue
-                Severity.MEDIUM -> R.color.brand_amber
+                Severity.LOW -> R.color.cyber_blue
+                Severity.MEDIUM -> R.color.electric_gold
                 Severity.HIGH -> android.R.color.holo_red_dark
             }
         }

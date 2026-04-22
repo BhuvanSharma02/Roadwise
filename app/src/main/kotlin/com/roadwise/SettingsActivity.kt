@@ -26,6 +26,17 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
     private var toneGenerator: ToneGenerator? = null
 
+    // ActivityResultLauncher for LoginActivity result
+    private val loginLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            updateNavForRole()
+            val name = com.roadwise.utils.SessionManager.getUserName(this)
+            android.widget.Toast.makeText(this, "Welcome back, $name!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
@@ -144,9 +155,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.sliderAudio.addOnChangeListener { _, value, fromUser ->
             prefs.edit().putFloat("pref_audio_alerts", value).apply()
             updateAudioLabel(value)
-            if (fromUser && value > 0f) {
-                // Play a short preview tone scaled to the slider volume
-                val vol = (value / 100f * 100).toInt().coerceIn(1, 100)
+                if (fromUser && value > 0f) {
                 try {
                     toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
                 } catch (_: Exception) { }
@@ -186,6 +195,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         setupNavigation()
+        updateNavForRole()
     }
 
     override fun onResume() {
@@ -201,11 +211,11 @@ class SettingsActivity : AppCompatActivity() {
         
         if (isIgnoring) {
             binding.tvBatteryStatus.text = "Optimized for background (Allowed)"
-            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.neon_primary))
+            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.emerald_neon))
             binding.btnBatteryOptimize.visibility = android.view.View.GONE
         } else {
             binding.tvBatteryStatus.text = "Restricted by system (Tap Fix Now)"
-            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.neon_text_med))
+            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.text_med))
             binding.btnBatteryOptimize.visibility = android.view.View.VISIBLE
         }
     }
@@ -272,6 +282,44 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
         binding.navSettings.setOnClickListener { /* already here */ }
+        binding.navAccount.setOnClickListener {
+            if (com.roadwise.utils.SessionManager.isLoggedIn(this)) {
+                showLogoutDialog()
+            } else {
+                loginLauncher.launch(Intent(this, LoginActivity::class.java))
+            }
+        }
+    }
+
+    private fun updateNavForRole() {
+        val isAdmin    = com.roadwise.utils.SessionManager.isAdmin(this)
+        val isLoggedIn = com.roadwise.utils.SessionManager.isLoggedIn(this)
+        val teal       = ContextCompat.getColor(this, R.color.emerald_neon)
+        val faded      = ContextCompat.getColor(this, R.color.text_med)
+
+        if (isAdmin) {
+            binding.navAlerts.setImageResource(R.drawable.ic_analytics)
+        } else {
+            binding.navAlerts.setImageResource(R.drawable.ic_alerts)
+        }
+
+        // Account icon: teal with ✓ tint when logged in
+        binding.navAccount.setColorFilter(if (isLoggedIn) teal else faded)
+        binding.navAccountLabel.setTextColor(if (isLoggedIn) teal else faded)
+        binding.navAccountLabel.text = if (isLoggedIn) com.roadwise.utils.SessionManager.getUserName(this).uppercase().take(8) else "ACCOUNT"
+    }
+
+    private fun showLogoutDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to log out of your RoadWise profile?")
+            .setPositiveButton("Logout") { _, _ ->
+                com.roadwise.utils.SessionManager.logout(this)
+                updateNavForRole()
+                android.widget.Toast.makeText(this, "Logged out successfully", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onDestroy() {

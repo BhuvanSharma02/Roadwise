@@ -97,6 +97,7 @@ class DrivingReceiver : BroadcastReceiver() {
             .setContentTitle("Driving Detected")
             .setContentText("Would you like to start RoadWise monitoring?")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setColor(androidx.core.content.ContextCompat.getColor(context, com.roadwise.R.color.emerald_neon))
             .setAutoCancel(true)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .addAction(com.roadwise.R.drawable.ic_drive, "Start Monitoring", startPendingIntent)

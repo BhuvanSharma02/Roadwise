@@ -39,7 +39,7 @@ object PotholeRepository {
     fun savePothole(context: Context, pothole: PotholeData) {
         try {
             val potholes = getAllPotholes(context).toMutableList()
-            potholes.add(pothole)
+            potholes.add(0, pothole)
             saveAll(context, potholes)
             cached = potholes
             pushToCloud(context, pothole)
@@ -89,20 +89,29 @@ object PotholeRepository {
             .addOnSuccessListener { result ->
                 val cloud = result.mapNotNull { doc ->
                     try {
+                        val severityStr = doc.getString("severity")
+                        val severity = if (severityStr != null) Severity.valueOf(severityStr) else Severity.LOW
+                        
                         PotholeData(
                             GeoPoint(doc.getDouble("lat")!!, doc.getDouble("lon")!!),
                             RoadFeature.valueOf(doc.getString("type")!!),
                             doc.getDouble("intensity")!!.toFloat(),
-                            Severity.valueOf(doc.getString("severity")!!),
+                            severity,
                             doc.getLong("timestamp")!!
                         )
-                    } catch(e: Exception) { null }
+                    } catch(e: Exception) { 
+                        Log.e("RoadWise-Repo", "Failed to parse document ${doc.id}", e)
+                        null 
+                    }
                 }
                 val local = getAllPotholes(context)
-                val combined = (local + cloud).distinctBy { it.timestamp }
+                val combined = (local + cloud).distinctBy { it.timestamp }.sortedByDescending { it.timestamp }
                 saveAll(context, combined)
                 cached = combined
                 onComplete(combined)
+            }
+            .addOnFailureListener { e ->
+                Log.e("RoadWise-Repo", "Firebase fetch failed completely", e)
             }
     }
 
@@ -110,6 +119,18 @@ object PotholeRepository {
         val potholes = getAllPotholes(context).toMutableList()
         potholes.removeAll { it.timestamp == timestamp }
         saveAllInternal(context, potholes)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val task = firestore.collection("potholes").whereEqualTo("timestamp", timestamp).get()
+                val result = com.google.android.gms.tasks.Tasks.await(task)
+                for (doc in result.documents) {
+                    com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
+                }
+            } catch (e: Exception) {
+                Log.e("RoadWise-Repo", "Failed to delete pothole from Firebase", e)
+            }
+        }
     }
 
     fun resolveHotspot(context: Context, targetPotholes: List<PotholeData>, onComplete: () -> Unit) {
@@ -178,8 +199,9 @@ object PotholeRepository {
                     result.add(PotholeData(loc, type, intensity, severity, timestamp, paths))
                 } catch (e: Exception) { }
             }
-            cached = result
-            result
+            val sortedResult = result.sortedByDescending { it.timestamp }
+            cached = sortedResult
+            sortedResult
         } catch (e: Exception) { emptyList() }
     }
 

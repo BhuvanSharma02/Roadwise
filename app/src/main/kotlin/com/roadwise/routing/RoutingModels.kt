@@ -1,6 +1,8 @@
 package com.roadwise.routing
 
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
+import android.os.Parcelable
 
 data class RoutingRequest(
     val coordinates: List<List<Double>>, // [[lon1, lat1], [lon2, lat2]]
@@ -75,7 +77,8 @@ data class PhotonProperties(
 )
 
 // Internal App Model to bundle route logic
+@Parcelize
 data class RouteResult(
     val points: List<org.osmdroid.util.GeoPoint>,
     val distanceMeters: Double
-)
+) : Parcelable

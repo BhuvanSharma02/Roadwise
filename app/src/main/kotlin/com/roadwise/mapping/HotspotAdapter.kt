@@ -57,7 +57,6 @@ class HotspotAdapter(
             RoadGrade.C -> Color.parseColor("#FBBF24") // Amber
             RoadGrade.D -> Color.parseColor("#F97316") // Orange
             RoadGrade.F -> Color.parseColor("#EF4444") // Red
-            else -> Color.GRAY
         }
     }
 }

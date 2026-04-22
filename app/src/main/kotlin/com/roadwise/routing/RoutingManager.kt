@@ -62,35 +62,42 @@ class RoutingManager {
             listOf(end.longitude, end.latitude)
         )
         
-        val options = if (potholesToAvoid.isNotEmpty()) {
-            val polygons = potholesToAvoid.map { data ->
-                listOf(BoundingBoxUtils.getPotholePolygon(data.location, 20.0)) // 20m avoidance zone
-            }
-            RoutingOptions(avoidPolygons = AvoidPolygons(coordinates = polygons))
-        } else {
-            null
-        }
+        val results = mutableListOf<RouteResult>()
         
-        // Request up to 3 alternatives
-        val alternatives = AlternativeRoutes(targetCount = 3)
-        val request = RoutingRequest(coordinates, options, alternatives)
-        
+        // 1. Get Direct Route (No avoidance)
         try {
-            val response = api.getDirections(BuildConfig.ORS_API_KEY, request)
+            val directRequest = RoutingRequest(coordinates, null, null)
+            val directResponse = api.getDirections(BuildConfig.ORS_API_KEY, directRequest)
+            directResponse.features.firstOrNull()?.let { feature ->
+                val points = feature.geometry.coordinates.map { GeoPoint(it[1], it[0]) }
+                val distance = feature.properties?.summary?.distance ?: 0.0
+                results.add(RouteResult(points, distance))
+            }
+        } catch (e: Exception) { Log.e("RoutingManager", "Direct route failed", e) }
+
+        // 2. Get Safe Routes (With avoidance)
+        if (potholesToAvoid.isNotEmpty()) {
+            val polygons = potholesToAvoid.map { data ->
+                listOf(BoundingBoxUtils.getPotholePolygon(data.location, 25.0))
+            }
+            val options = RoutingOptions(avoidPolygons = AvoidPolygons(coordinates = polygons))
+            val alternatives = AlternativeRoutes(targetCount = 2)
+            val safeRequest = RoutingRequest(coordinates, options, alternatives)
             
-            return response.features.mapNotNull { feature ->
-                if (feature.geometry.type == "LineString") {
+            try {
+                val safeResponse = api.getDirections(BuildConfig.ORS_API_KEY, safeRequest)
+                safeResponse.features.forEach { feature ->
                     val points = feature.geometry.coordinates.map { GeoPoint(it[1], it[0]) }
                     val distance = feature.properties?.summary?.distance ?: 0.0
-                    RouteResult(points, distance)
-                } else {
-                    null
+                    // Avoid adding duplicate of direct route if it's the same
+                    if (results.none { it.points.size == points.size && it.distanceMeters == distance }) {
+                        results.add(RouteResult(points, distance))
+                    }
                 }
-            }
-        } catch (e: Exception) {
-            Log.e("RoutingManager", "Error fetching route", e)
-            throw e
+            } catch (e: Exception) { Log.e("RoutingManager", "Safe routes failed", e) }
         }
+        
+        return results
     }
 
     suspend fun searchPlaces(query: String, lat: Double? = null, lon: Double? = null): List<PhotonFeature> {

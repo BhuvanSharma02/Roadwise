@@ -49,7 +49,7 @@
                 android:layout_height="match_parent"
                 android:src="@drawable/ic_settings"
                 android:padding="10dp"
-                app:tint="@color/brand_teal" />
+                app:tint="@color/emerald_neon" />
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
@@ -74,7 +74,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="APPEARANCE"
-                android:textColor="@color/brand_teal"
+                android:textColor="@color/emerald_neon"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
@@ -169,7 +169,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="DETECTION ENGINE"
-                android:textColor="@color/brand_teal"
+                android:textColor="@color/emerald_neon"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
@@ -224,8 +224,8 @@
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            app:thumbTint="@color/brand_teal"
-                            app:trackTint="@color/brand_teal" />
+                            app:thumbTint="@color/emerald_neon"
+                            app:trackTint="@color/emerald_neon" />
                     </RelativeLayout>
 
                     <View
@@ -265,8 +265,8 @@
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            app:thumbTint="@color/brand_teal"
-                            app:trackTint="@color/brand_teal" />
+                            app:thumbTint="@color/emerald_neon"
+                            app:trackTint="@color/emerald_neon" />
                     </RelativeLayout>
 
                     <View
@@ -309,7 +309,7 @@
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
                             android:text="Fix Now"
-                            android:textColor="@color/brand_teal" />
+                            android:textColor="@color/emerald_neon" />
                     </RelativeLayout>
 
                     <View
@@ -349,8 +349,8 @@
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            app:thumbTint="@color/brand_teal"
-                            app:trackTint="@color/brand_teal" />
+                            app:thumbTint="@color/emerald_neon"
+                            app:trackTint="@color/emerald_neon" />
                     </RelativeLayout>
 
                     <View
@@ -384,9 +384,9 @@
                         android:valueTo="2.0"
                         android:stepSize="1.0"
                         app:thumbColor="?attr/colorOnSurface"
-                        app:trackColorActive="@color/brand_teal"
+                        app:trackColorActive="@color/emerald_neon"
                         app:trackColorInactive="?attr/glassBorder"
-                        app:haloColor="@color/brand_teal"
+                        app:haloColor="@color/emerald_neon"
                         app:labelBehavior="gone" />
 
                     <LinearLayout
@@ -414,7 +414,7 @@
                             android:layout_weight="1"
                             android:gravity="end"
                             android:text="Proactive"
-                            android:textColor="@color/brand_teal"
+                            android:textColor="@color/emerald_neon"
                             android:textSize="11sp" />
                     </LinearLayout>
 
@@ -438,7 +438,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="RESOURCE MANAGEMENT"
-                android:textColor="@color/brand_teal"
+                android:textColor="@color/emerald_neon"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
@@ -493,8 +493,8 @@
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            app:thumbTint="@color/brand_amber"
-                            app:trackTint="@color/brand_amber" />
+                            app:thumbTint="@color/electric_gold"
+                            app:trackTint="@color/electric_gold" />
                     </RelativeLayout>
 
                     <View
@@ -534,8 +534,8 @@
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            app:thumbTint="@color/brand_teal"
-                            app:trackTint="@color/brand_teal" />
+                            app:thumbTint="@color/emerald_neon"
+                            app:trackTint="@color/emerald_neon" />
                     </RelativeLayout>
 
                     <View
@@ -582,9 +582,9 @@
                         android:valueFrom="0.0"
                         android:valueTo="100.0"
                         app:thumbColor="?attr/colorOnSurface"
-                        app:trackColorActive="@color/brand_amber"
+                        app:trackColorActive="@color/electric_gold"
                         app:trackColorInactive="?attr/glassBorder"
-                        app:haloColor="@color/brand_amber"
+                        app:haloColor="@color/electric_gold"
                         app:labelBehavior="gone" />
 
                 </LinearLayout>
@@ -597,7 +597,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="DATA MANAGEMENT"
-                android:textColor="@color/brand_teal"
+                android:textColor="@color/emerald_neon"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
@@ -659,7 +659,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="--"
-                                android:textColor="@color/brand_teal"
+                                android:textColor="@color/emerald_neon"
                                 android:textStyle="bold"
                                 android:textSize="14sp"
                                 android:paddingHorizontal="12dp"
@@ -711,7 +711,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/brand_amber"
+                                android:textColor="@color/electric_gold"
                                 android:textStyle="bold"
                                 android:textSize="14sp"
                                 android:paddingHorizontal="12dp"
@@ -749,7 +749,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="ABOUT"
-                android:textColor="@color/brand_teal"
+                android:textColor="@color/emerald_neon"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
@@ -855,10 +855,10 @@
                         android:layout_height="52dp"
                         android:text="Share RoadWise"
                         app:cornerRadius="14dp"
-                        android:textColor="@color/brand_teal"
-                        app:strokeColor="@color/brand_teal"
+                        android:textColor="@color/emerald_neon"
+                        app:strokeColor="@color/emerald_neon"
                         app:icon="@drawable/ic_export"
-                        app:iconTint="@color/brand_teal"
+                        app:iconTint="@color/emerald_neon"
                         app:iconGravity="textStart" />
 
                 </LinearLayout>
@@ -950,15 +950,39 @@
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_settings"
-                    app:tint="@color/brand_teal" />
+                    app:tint="@color/emerald_neon" />
                 <TextView
+                    android:id="@+id/navSettingsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Settings"
                     android:textSize="10sp"
-                    android:textColor="@color/brand_teal"
+                    android:textColor="@color/emerald_neon"
                     android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginStart="4dp">
+                <ImageButton
+                    android:id="@+id/navAccount"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_person"
+                    app:tint="?attr/textFaded" />
+                <TextView
+                    android:id="@+id/navAccountLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Account"
+                    android:textSize="10sp"
+                    android:textColor="?attr/textFaded" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

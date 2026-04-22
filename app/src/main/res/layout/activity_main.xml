@@ -4,25 +4,28 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
+    android:background="@color/obsidian_lowest"
     tools:context=".MainActivity">
 
-    <!-- Full Screen Map Background (OpenStreetMap) -->
+    <!-- Full Screen Map Background -->
     <org.osmdroid.views.MapView
         android:id="@+id/map"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Top Search Bar (Floating Glassmorphic) -->
+    <!-- ══════════════════════════════════════════ -->
+    <!-- TOP BAR: Search + Status Strip             -->
+    <!-- ══════════════════════════════════════════ -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/searchCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardBackgroundColor="?attr/glassSurface"
-        app:cardCornerRadius="28dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="@color/glass_surface"
+        app:cardCornerRadius="999dp"
         app:cardElevation="0dp"
-        app:strokeColor="?attr/glassBorder"
+        app:strokeColor="@color/glass_border"
         app:strokeWidth="1dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -33,165 +36,229 @@
             android:layout_height="wrap_content">
 
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
                 android:layout_gravity="center_vertical|start"
-                android:layout_marginStart="18dp"
+                android:layout_marginStart="20dp"
                 android:src="@drawable/ic_search"
-                app:tint="?attr/textFaded" />
+                app:tint="@color/text_low" />
 
             <AutoCompleteTextView
                 android:id="@+id/searchPlace"
                 android:layout_width="match_parent"
-                android:layout_height="54dp"
+                android:layout_height="52dp"
                 android:background="@android:color/transparent"
-                android:hint="Search destinations..."
-                android:paddingStart="52dp"
+                android:hint="Where to, Driver?"
+                android:paddingStart="48dp"
                 android:paddingEnd="48dp"
                 android:singleLine="true"
+                android:textColor="@color/text_high"
+                android:textColorHint="@color/text_low"
                 android:fontFamily="sans-serif-medium"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:imeOptions="actionSearch" />
 
             <ProgressBar
                 android:id="@+id/searchProgress"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
                 android:layout_gravity="center_vertical|end"
                 android:layout_marginEnd="18dp"
+                android:indeterminateTint="@color/emerald_neon"
                 android:visibility="gone" />
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 
-
-
-    <!-- Stats HUD Card (Holographic Data-Pulse) -->
+    <!-- ══════════════════════════════════════════ -->
+    <!-- LEFT HUD: Stats + Monitoring Toggle        -->
+    <!-- ══════════════════════════════════════════ -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/statsCard"
-        android:layout_width="wrap_content"
+        android:layout_width="148dp"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardBackgroundColor="?attr/glassSurface"
-        app:cardCornerRadius="24dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="@color/glass_surface_deep"
+        app:cardCornerRadius="20dp"
         app:cardElevation="0dp"
-        app:strokeColor="?attr/glassBorder"
+        app:strokeColor="@color/glass_border"
         app:strokeWidth="1dp"
         app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
         app:layout_constraintStart_toStartOf="parent">
 
-        <!-- Outer layout to hold the data pulse bar and contents -->
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-            <!-- Data Pulse Bar -->
+            <!-- Neon accent top bar -->
             <View
-                android:layout_width="3dp"
-                android:layout_height="match_parent"
-                android:background="?attr/colorPrimary"
-                android:alpha="0.9" />
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:background="@color/emerald_neon"
+                android:alpha="0.8" />
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp"
-                android:minWidth="110dp">
+                android:padding="14dp">
 
-                <!-- Verified Potholes Row -->
+                <!-- Speed Block -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="VERIFIED"
+                    android:text="VELOCITY"
                     android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.08"
-                    android:textColor="?attr/textFaded"
-                    android:textSize="10sp" />
-
-                <TextView
-                    android:id="@+id/potholeCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="-2dp"
-                    android:text="0"
-                    android:textColor="?attr/colorPrimary"
-                    android:fontFamily="sans-serif-black"
-                    android:textSize="36sp" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="10dp"
-                    android:background="?attr/glassBorder" />
-
-                <!-- Speed Row -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SPEED"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.08"
-                    android:textColor="?attr/textFaded"
-                    android:textSize="10sp" />
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/text_low"
+                    android:textSize="9sp" />
 
                 <TextView
                     android:id="@+id/speedValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="0dp"
-                    android:text="0 km/h"
-                    android:textColor="?attr/colorOnSurface"
-                    android:fontFamily="sans-serif-medium"
-                    android:textSize="20sp" />
+                    android:text="0"
+                    android:textColor="@color/text_high"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:textSize="36sp"
+                    android:lineSpacingMultiplier="0.85" />
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="km/h"
+                    android:textColor="@color/text_low"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="10sp"
+                    android:layout_marginTop="-4dp" />
+
+                <!-- Divider -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginVertical="10dp"
-                    android:background="?attr/glassBorder" />
+                    android:background="@color/glass_border" />
 
-                <!-- Quality Row -->
+                <!-- Hazard Count Block -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="QUALITY"
+                    android:text="HAZARDS"
                     android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.08"
-                    android:textColor="?attr/textFaded"
-                    android:textSize="10sp" />
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/text_low"
+                    android:textSize="9sp" />
 
                 <TextView
-                    android:id="@+id/qualityValue"
+                    android:id="@+id/potholeCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="0dp"
+                    android:text="0"
+                    android:textColor="@color/emerald_neon"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:textSize="36sp"
+                    android:lineSpacingMultiplier="0.85" />
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="10dp"
+                    android:background="@color/glass_border" />
+
+                <!-- Monitoring Toggle Row -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MONITORING"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/text_low"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/monitoringStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
                     android:text="--"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/text_med"
                     android:fontFamily="sans-serif-medium"
-                    android:textSize="18sp" />
+                    android:textSize="11sp" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/toggleMonitoring"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:checked="true"
+                    app:useMaterialThemeColors="true" />
+
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Theme Toggle FAB -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/btnTheme"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:contentDescription="Toggle Theme"
-        android:src="@drawable/ic_theme_toggle"
-        app:backgroundTint="?attr/glassSurface"
-        app:fabSize="mini"
-        app:elevation="0dp"
-        app:strokeColor="?attr/glassBorder"
-        app:strokeWidth="1dp"
-        app:layout_constraintTop_toBottomOf="@id/searchCard"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:tint="?attr/colorOnSurface" />
+    <!-- ══════════════════════════════════════════ -->
+    <!-- RIGHT CONTROLS: Recenter + Theme           -->
+    <!-- ══════════════════════════════════════════ -->
 
-    <!-- Floating Grade Legend (Left Side) -->
+    <!-- Recenter Button -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/btnRecenterContainer"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="@color/glass_surface"
+        app:cardCornerRadius="999dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/glass_border"
+        app:strokeWidth="1dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnRecenter"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_my_location"
+            android:padding="12dp"
+            app:tint="@color/emerald_neon" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Theme Toggle Button -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/btnThemeContainer"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        app:cardBackgroundColor="@color/glass_surface"
+        app:cardCornerRadius="999dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/glass_border"
+        app:strokeWidth="1dp"
+        app:layout_constraintBottom_toTopOf="@id/btnRecenterContainer"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btnTheme"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Toggle Theme"
+            android:src="@drawable/ic_theme_toggle"
+            app:backgroundTint="@android:color/transparent"
+            app:fabSize="mini"
+            app:elevation="0dp"
+            app:maxImageSize="20dp"
+            app:tint="@color/text_med" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Grade Legend (hidden by default) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/gradeLegend"
         android:layout_width="wrap_content"
@@ -199,10 +266,10 @@
         android:layout_marginStart="16dp"
         android:layout_marginBottom="16dp"
         android:visibility="gone"
-        app:cardBackgroundColor="?attr/glassSurface"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="8dp"
-        app:strokeColor="?attr/glassBorder"
+        app:cardBackgroundColor="@color/glass_surface_deep"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/glass_border"
         app:strokeWidth="1dp"
         app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
         app:layout_constraintStart_toStartOf="parent">
@@ -216,38 +283,44 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ROAD QUALITY"
+                android:text="ROAD GRADE"
                 android:textSize="9sp"
                 android:fontFamily="sans-serif-medium"
-                android:textColor="?attr/textFaded"
-                android:layout_marginBottom="6dp"/>
+                android:letterSpacing="0.12"
+                android:textColor="@color/text_low"
+                android:layout_marginBottom="8dp" />
 
-            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="4dp">
-                <View android:layout_width="8dp" android:layout_height="8dp" android:background="#2ECC71" android:layout_marginEnd="8dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="A — Excellent" android:textSize="10sp" android:textColor="?attr/colorOnSurface"/>
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="4dp">
+                <View android:layout_width="6dp" android:layout_height="6dp" android:background="@color/emerald_neon" android:layout_marginEnd="8dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="A — Excellent" android:textSize="10sp" android:textColor="@color/text_high" />
             </LinearLayout>
-            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="4dp">
-                <View android:layout_width="8dp" android:layout_height="8dp" android:background="#F4D03F" android:layout_marginEnd="8dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="C — Fair" android:textSize="10sp" android:textColor="?attr/colorOnSurface"/>
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="4dp">
+                <View android:layout_width="6dp" android:layout_height="6dp" android:background="@color/electric_gold" android:layout_marginEnd="8dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="C — Fair" android:textSize="10sp" android:textColor="@color/text_high" />
             </LinearLayout>
-            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                <View android:layout_width="8dp" android:layout_height="8dp" android:background="#E74C3C" android:layout_marginEnd="8dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="F — Critical" android:textSize="10sp" android:textColor="?attr/colorOnSurface"/>
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <View android:layout_width="6dp" android:layout_height="6dp" android:background="#FF3B30" android:layout_marginEnd="8dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="F — Critical" android:textSize="10sp" android:textColor="@color/text_high" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Floating Bottom Navigation Pill -->
+    <!-- ══════════════════════════════════════════ -->
+    <!-- BOTTOM NAV: Floating Pill Navigation       -->
+    <!-- ══════════════════════════════════════════ -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/bottomNavCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="24dp"
-        app:cardBackgroundColor="?attr/glassSurfaceDeep"
-        app:cardCornerRadius="40dp"
+        android:layout_marginBottom="24dp"
+        app:cardBackgroundColor="@color/glass_surface_deep"
+        app:cardCornerRadius="999dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/transparent"
-        app:strokeWidth="0dp"
+        app:strokeColor="@color/glass_border"
+        app:strokeWidth="1dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -257,134 +330,182 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="10dp">
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="8dp">
 
             <!-- Drive Tab -->
             <LinearLayout
-                android:layout_width="66dp"
+                android:layout_width="72dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center">
+                android:gravity="center"
+                android:padding="4dp">
                 <ImageButton
                     android:id="@+id/navDrive"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_drive"
-                    app:tint="@color/brand_teal" />
+                    app:tint="@color/emerald_neon" />
                 <TextView
                     android:id="@+id/navDriveLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Drive"
-                    android:textSize="10sp"
-                    android:textColor="@color/brand_teal"
+                    android:layout_marginTop="3dp"
+                    android:text="DRIVE"
+                    android:textSize="8sp"
+                    android:textColor="@color/emerald_neon"
+                    android:letterSpacing="0.12"
                     android:fontFamily="sans-serif-medium" />
             </LinearLayout>
 
-            <!-- History / Overview Tab (swapped dynamically for admin) -->
+            <!-- History / Overview Tab -->
             <LinearLayout
                 android:id="@+id/navAlertsContainer"
-                android:layout_width="66dp"
+                android:layout_width="72dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginStart="2dp">
+                android:padding="4dp">
                 <ImageButton
                     android:id="@+id/navAlerts"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_alerts"
-                    app:tint="?attr/textFaded" />
+                    app:tint="@color/text_low" />
                 <TextView
                     android:id="@+id/navAlertsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="History"
+                    android:layout_marginTop="3dp"
+                    android:text="HISTORY"
+                    android:textSize="8sp"
+                    android:letterSpacing="0.12"
                     android:fontFamily="sans-serif-medium"
-                    android:textSize="10sp"
-                    android:textColor="?attr/textFaded" />
+                    android:textColor="@color/text_low" />
             </LinearLayout>
 
             <!-- Settings Tab -->
             <LinearLayout
-                android:layout_width="66dp"
+                android:layout_width="72dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginStart="2dp">
+                android:padding="4dp">
                 <ImageButton
                     android:id="@+id/navSettings"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_settings"
-                    app:tint="?attr/textFaded" />
+                    app:tint="@color/text_low" />
                 <TextView
                     android:id="@+id/navSettingsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Settings"
+                    android:layout_marginTop="3dp"
+                    android:text="CONFIG"
+                    android:textSize="8sp"
+                    android:letterSpacing="0.12"
                     android:fontFamily="sans-serif-medium"
-                    android:textSize="10sp"
-                    android:textColor="?attr/textFaded" />
+                    android:textColor="@color/text_low" />
             </LinearLayout>
 
             <!-- Account Tab -->
             <LinearLayout
-                android:layout_width="66dp"
+                android:layout_width="72dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:layout_marginStart="2dp">
+                android:padding="4dp">
                 <ImageButton
                     android:id="@+id/navAccount"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_person"
-                    app:tint="?attr/textFaded" />
+                    app:tint="@color/text_low" />
                 <TextView
                     android:id="@+id/navAccountLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Account"
+                    android:layout_marginTop="3dp"
+                    android:text="ACCOUNT"
+                    android:textSize="8sp"
+                    android:letterSpacing="0.12"
                     android:fontFamily="sans-serif-medium"
-                    android:textSize="10sp"
-                    android:textColor="?attr/textFaded" />
+                    android:textColor="@color/text_low" />
             </LinearLayout>
+
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
-
-    <!-- Floating Recenter Button (Moved above camera card to avoid overlap) -->
+    <!-- ══════════════════════════════════════════ -->
+    <!-- NAVIGATION OVERLAY: Maps Style Bottom Card -->
+    <!-- ══════════════════════════════════════════ -->
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/btnRecenterContainer"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="250dp"
-        app:cardBackgroundColor="?attr/glassSurface"
-        app:cardCornerRadius="26dp"
-        app:cardElevation="0dp"
-        app:strokeColor="?attr/glassBorder"
+        android:id="@+id/navPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/obsidian_background"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="12dp"
+        app:strokeColor="@color/emerald_neon"
         app:strokeWidth="1dp"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavCard"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <ImageButton
-            android:id="@+id/btnRecenter"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_my_location"
-            android:padding="13dp"
-            app:tint="@color/brand_teal" />
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="20dp">
+
+            <ImageView
+                android:id="@+id/navDirectionIcon"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_drive"
+                app:tint="@color/emerald_neon" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNavInstruction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
+                    android:text="Follow the blue path"
+                    android:textColor="@color/text_high"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/tvNavDetail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Navigation Mode Active"
+                    android:textColor="@color/text_low"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStopNav"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EXIT"
+                android:textColor="#FF3B30"
+                android:textStyle="bold" />
+        </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

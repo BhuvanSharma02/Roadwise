@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RoadWise - Hazard Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&amp;family=JetBrains+Mono:wght@700&amp;family=Space+Grotesk:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#004e5a",
+                        "on-surface": "#e2e2e2",
+                        "surface-container": "#1f1f1f",
+                        "on-background": "#e2e2e2",
+                        "secondary-fixed": "#ffe16d",
+                        "surface-container-highest": "#353535",
+                        "surface-variant": "#353535",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#1b1b1b",
+                        "surface": "#131313",
+                        "primary-fixed": "#36ffc4",
+                        "on-tertiary-fixed": "#001f25",
+                        "on-tertiary": "#00363f",
+                        "on-secondary": "#3a3000",
+                        "inverse-on-surface": "#303030",
+                        "on-secondary-fixed-variant": "#544600",
+                        "secondary-fixed-dim": "#e9c400",
+                        "on-primary-fixed": "#002116",
+                        "surface-dim": "#131313",
+                        "tertiary": "#fcfeff",
+                        "tertiary-container": "#9fedff",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-primary-container": "#007255",
+                        "secondary": "#fff9ef",
+                        "on-primary-fixed-variant": "#00513c",
+                        "inverse-primary": "#006c50",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary-container": "#ffdb3c",
+                        "surface-tint": "#00e1ab",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e2e2e2",
+                        "background": "#131313",
+                        "outline": "#83958c",
+                        "outline-variant": "#3a4a43",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#00daf8",
+                        "primary-fixed-dim": "#00e1ab",
+                        "surface-bright": "#393939",
+                        "on-primary": "#003828",
+                        "on-tertiary-container": "#006e7e",
+                        "tertiary-fixed": "#a5eeff",
+                        "on-secondary-fixed": "#221b00",
+                        "on-secondary-container": "#725f00",
+                        "on-surface-variant": "#b9cbc1",
+                        "primary-container": "#00ffc2",
+                        "primary": "#fbfffa",
+                        "on-error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "unit-1": "4px",
+                        "base": "4px",
+                        "unit-4": "16px",
+                        "unit-12": "48px",
+                        "unit-2": "8px",
+                        "unit-6": "24px",
+                        "safe-margin": "24px",
+                        "unit-8": "32px"
+                    },
+                    "fontFamily": {
+                        "data-speed": ["JetBrains Mono"],
+                        "label-caps": ["Space Grotesk"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-hero": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-speed": ["64px", {"lineHeight": "1.0", "fontWeight": "700"}],
+                        "label-caps": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                        "headline-lg": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "display-hero": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(19, 19, 19, 0.8);
+            backdrop-filter: blur(40px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .amber-glow {
+            box-shadow: 0 0 15px rgba(255, 219, 60, 0.4);
+        }
+        .neon-primary-glow {
+            text-shadow: 0 0 8px rgba(0, 255, 194, 0.6);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen overflow-hidden">
+<!-- Map Background (Dimmed) -->
+<div class="fixed inset-0 z-0">
+<div class="absolute inset-0 bg-black/60 z-10"></div>
+<img class="w-full h-full object-cover grayscale opacity-40" data-alt="Dark stylized navigation map of a modern city at night with neon blue and green street paths and glowing markers" data-location="San Francisco" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWUw5Xxv0MAgwfFLhKHtfm-o7WIZhICm_BGLNTAEY9FBQGk_nWgtZGFBgJE769rt_xCce_mTUV423in47vQJmYlhiemTGkT7_WQ6j1V6c20f9zI-rIxPzRNYsQUFguJzu63TBMYXvf_hl05SrKrRL2lB5nMF0GpA80rZsNaebQiL9550dO0Z0mUulAovCDh5jfRbOBd7Ri-wI8kwb3vLskElZvpMGEoCrcbP-xZZPYGDTDnlYmB-J3oKhAolphFvCDzUyhbmTqi-g"/>
+</div>
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-slate-950/80 backdrop-blur-[40px] border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#00FFC2]" data-icon="sensors">sensors</span>
+<h1 class="font-['Inter'] uppercase tracking-widest font-black text-[#00FFC2] italic text-xl tracking-tighter drop-shadow-[0_0_10px_rgba(0,255,194,0.4)]">ROADWISE</h1>
+</div>
+<div class="w-8 h-8 rounded-full border border-[#00FFC2]/30 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of a driver with serious expression, cinematic lighting, neon reflections from dashboard on face" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoNrPMUfKt6-_GbSLPHBFjSQUCk7S_SEbT6rKn5VjP4tFyogCFCq9ObUN-RNkklqPvH2EfJ21RUtRb1D426FYDtelwYDAVbpwLOpZJZIOuLpxVaSsOoV0MMpMwVrHbpzWiNqSrB0DH6GrMoFPsU8Tij4m-lYZk9IJN8dQHV468cetj2uacpSMbgw6_qK8QG_i_wO6fntbO0uIVXBE3bo8vA8RNn22v8kAp7IDRIPv761gxFDxfJY9nPsQsWLPnUsBy10Q3FAtyOFE"/>
+</div>
+</header>
+<!-- Main Content / Bottom Sheet Container -->
+<main class="relative z-20 min-h-screen flex flex-col justify-end">
+<!-- Bottom Sheet Hazard Detail -->
+<div class="glass-panel w-full rounded-t-[32px] px-safe-margin pt-unit-2 pb-unit-12 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+<!-- Handle -->
+<div class="flex justify-center mb-unit-6">
+<div class="w-12 h-1.5 bg-white/20 rounded-full"></div>
+</div>
+<!-- Hazard Header -->
+<div class="flex items-start justify-between mb-unit-8">
+<div>
+<div class="flex items-center gap-2 mb-unit-1">
+<span class="material-symbols-outlined text-secondary-container" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label-caps text-label-caps text-secondary-container uppercase">Hazard Detected</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Pothole Structural Fail</h2>
+<p class="text-on-surface-variant text-sm mt-1">Main St. Northbound Lane 2</p>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-on-surface-variant mb-unit-1 uppercase">Severity</span>
+<div class="bg-secondary-container/10 border border-secondary-container text-secondary-container px-3 py-1 rounded-full amber-glow">
+<span class="font-label-caps text-label-caps">CRITICAL</span>
+</div>
+</div>
+</div>
+<!-- Bento Metrics Grid -->
+<div class="grid grid-cols-4 gap-unit-4 mb-unit-8">
+<!-- G-Force Card -->
+<div class="col-span-2 bg-surface-container-high rounded-xl p-unit-4 border border-white/5 relative overflow-hidden">
+<div class="relative z-10">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block mb-unit-2">Impact Force</span>
+<div class="flex items-baseline gap-1">
+<span class="font-data-speed text-data-speed text-secondary-container">3.4</span>
+<span class="font-label-caps text-label-caps text-secondary-container/60">G</span>
+</div>
+</div>
+<div class="absolute right-[-10px] bottom-[-20px] opacity-10">
+<span class="material-symbols-outlined text-9xl" data-icon="speed">speed</span>
+</div>
+</div>
+<!-- Timestamp Card -->
+<div class="col-span-2 space-y-unit-4">
+<div class="bg-surface-container-high rounded-xl p-unit-4 border border-white/5 flex flex-col justify-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Detection Date</span>
+<span class="font-headline-lg text-lg text-on-surface">Oct 24, 2023</span>
+</div>
+<div class="bg-surface-container-high rounded-xl p-unit-4 border border-white/5 flex flex-col justify-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Precise Time</span>
+<span class="font-data-speed text-2xl text-on-surface">14:32:05</span>
+</div>
+</div>
+</div>
+<!-- Visual Evidence / Image -->
+<div class="mb-unit-8">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase block mb-unit-4">Sensor Visualization</span>
+<div class="relative rounded-xl overflow-hidden aspect-video border border-white/10">
+<img class="w-full h-full object-cover" data-alt="Close-up of a deep jagged pothole in cracked asphalt road, cinematic dark lighting with orange safety cone light reflection" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZZf5fIF7YKc4eGK44nnwkTrAmMvHdy2LCzc9Hip_qgHke0cPZGLdRlChXAQOplh6Wx0GjonCKSt2TKA8uLZsMp8n-0_RjymJsffCxK9eVnBIODG05tFYIUNVLwoji0RCYe15ZYKf963kpm7vmw-Zon8_nT3u8znBE5mW50ROj1NEivT9To8536MG3S22ERJZWqILXcKSFADQ46N4XusKgCD5n-wb_d8fMxBP8ahPHTpdrVWMqc5tpUGguB-hv2ZqOH_RjxM2tjqo"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<!-- Telemetry Overlay -->
+<div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+<div class="bg-black/60 backdrop-blur-md px-3 py-2 rounded border border-white/10 font-data-speed text-[10px] text-primary-container">
+                            XY_COORD: 37.7749 / 122.4194
+                        </div>
+<div class="bg-secondary-container text-black px-2 py-0.5 rounded font-label-caps text-[10px]">
+                            CAM_04 ACTIVE
+                        </div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="flex gap-unit-4">
+<button class="flex-1 bg-surface-container-highest text-on-surface py-4 rounded-xl font-label-caps uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 duration-200 border border-white/5">
+<span class="material-symbols-outlined text-sm" data-icon="close">close</span>
+                    Dismiss
+                </button>
+<button class="flex-[2] bg-primary-container text-on-primary py-4 rounded-xl font-label-caps uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 duration-200 shadow-[0_0_20px_rgba(0,255,194,0.3)]">
+<span class="material-symbols-outlined text-sm" data-icon="share">share</span>
+                    Report Hazard
+                </button>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar (From JSON) -->
+<nav class="fixed bottom-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-black border-t border-white/5 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.8)]">
+<div class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="speed">speed</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">HUD</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#00FFC2] drop-shadow-[0_0_12px_rgba(0,255,194,0.6)] active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Hazards</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">History</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-600 hover:text-[#00FFC2]/80 transition-all active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-[10px] font-bold uppercase tracking-wider">Settings</span>
+</div>
+</nav>
+</body></html>

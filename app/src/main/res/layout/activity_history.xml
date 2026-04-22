@@ -4,99 +4,181 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
+    android:background="@color/obsidian_lowest"
     tools:context=".HistoryActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+    <!-- ══════════════════════════════════════════ -->
+    <!-- HEADER                                     -->
+    <!-- ══════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/historyHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
-        app:elevation="4dp"
+        android:orientation="vertical"
+        android:paddingTop="24dp"
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="16dp"
+        android:background="@color/obsidian_lowest"
         app:layout_constraintTop_toTopOf="parent">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
+        <!-- Nav back row -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="Pothole History"
-            app:titleTextColor="?attr/colorOnSurface" />
-    </com.google.android.material.appbar.AppBarLayout>
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
 
-    <TextView
-        android:id="@+id/tvSummary"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="12dp"
-        android:paddingHorizontal="16dp"
-        android:text=""
-        android:textColor="?attr/textFaded"
-        android:textSize="13sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.05"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/appBarLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+            <ImageButton
+                android:id="@+id/toolbar"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                android:padding="6dp"
+                app:tint="@color/text_med" />
 
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="ROADWISE"
+                android:textColor="@color/emerald_neon"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.15" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/glass_surface"
+                app:cardCornerRadius="999dp"
+                app:strokeColor="@color/glass_border"
+                app:strokeWidth="1dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:text="EXPORT"
+                    android:textColor="@color/electric_gold"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.1" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- Title row -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Drive History"
+            android:textColor="@color/text_high"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-black"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/tvSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text=""
+            android:textColor="@color/text_low"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.05"
+            android:visibility="gone" />
+
+        <!-- Neon bottom line -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="2dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/emerald_neon" />
+    </LinearLayout>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- HAZARD LIST                                -->
+    <!-- ══════════════════════════════════════════ -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPotholes"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingTop="4dp"
-        android:paddingBottom="80dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="100dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvSummary"
+        app:layout_constraintTop_toBottomOf="@id/historyHeader"
         tools:listitem="@layout/item_pothole" />
 
-    <!-- Premium Empty State -->
+    <!-- ══════════════════════════════════════════ -->
+    <!-- EMPTY STATE                                -->
+    <!-- ══════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/tvEmpty"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
+        android:padding="32dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/appBarLayout">
+        app:layout_constraintTop_toBottomOf="@id/historyHeader">
 
-        <ImageView
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:src="@drawable/ic_history"
-            app:tint="?attr/textFaded"
-            android:layout_marginBottom="16dp"/>
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            app:cardBackgroundColor="@color/glass_surface"
+            app:cardCornerRadius="999dp"
+            app:strokeColor="@color/glass_border"
+            app:strokeWidth="1dp"
+            android:layout_marginBottom="20dp">
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="20dp"
+                android:src="@drawable/ic_history"
+                app:tint="@color/text_low" />
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="No driving history found"
+            android:text="No Hazards Logged"
             android:textStyle="bold"
             android:textSize="18sp"
-            android:textColor="?attr/colorOnSurface" />
+            android:textColor="@color/text_high"
+            android:fontFamily="sans-serif-medium" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="200dp"
             android:layout_height="wrap_content"
-            android:text="Drive to automatically detect road anomalies."
+            android:text="Drive to automatically detect and record road anomalies."
             android:layout_marginTop="8dp"
-            android:textSize="14sp"
-            android:textColor="?attr/textFaded" />
+            android:textSize="13sp"
+            android:gravity="center"
+            android:textColor="@color/text_low" />
     </LinearLayout>
 
+    <!-- ══════════════════════════════════════════ -->
+    <!-- EXPORT FAB                                 -->
+    <!-- ══════════════════════════════════════════ -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/btnExportPdf"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="24dp"
         android:text="Export PDF"
-        android:textColor="?attr/colorOnSecondary"
-        app:backgroundTint="?attr/colorSecondary"
+        android:textColor="@color/obsidian_background"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.05"
+        app:backgroundTint="@color/electric_gold"
         app:icon="@drawable/ic_export"
-        app:iconTint="?attr/colorOnSecondary"
+        app:iconTint="@color/obsidian_background"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
