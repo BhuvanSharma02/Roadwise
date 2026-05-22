@@ -35,7 +35,7 @@ class BumpDetector(
     private var writeIndex = 0
     private var samplesCount = 0
 
-    private val MIN_SPEED_KMH = 8 // Slightly increased for reliability
+    private val MIN_SPEED_KMH = 3 // Capture even if slowing down significantly
     private var lastEventTime = 0L
 
     fun start() {

@@ -99,6 +99,15 @@ class MainActivity : AppCompatActivity() {
             updateNavForRole()
             val name = SessionManager.getUserName(this)
             Toast.makeText(this, "Welcome, $name!", Toast.LENGTH_SHORT).show()
+            
+            // Trigger sync on login to upload local offline records
+            PotholeRepository.fetchFromCloud(this) { combinedList ->
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed && ::map.isInitialized) {
+                        refreshMarkers()
+                    }
+                }
+            }
         }
     }
 
@@ -131,11 +140,8 @@ class MainActivity : AppCompatActivity() {
             verifiedPotholeCount = allDetections.count { it.type == RoadFeature.POTHOLE }
             binding.potholeCount.text = verifiedPotholeCount.toString()
 
-            detectionManager = DetectionManager { type, severity, intensity ->
-                val loc = locationOverlay.myLocation
-                    ?: locationOverlay.myLocationProvider?.lastKnownLocation?.let { GeoPoint(it) }
-
-                if (loc != null && loc.latitude != 0.0) {
+            detectionManager = DetectionManager { type, severity, intensity, loc ->
+                if (loc.latitude != 0.0) {
                     val data = PotholeData(loc, type, intensity, severity, System.currentTimeMillis(), emptyList())
                     PotholeRepository.savePothole(this, data)
                     runOnUiThread {
@@ -190,6 +196,10 @@ class MainActivity : AppCompatActivity() {
                 while (isActive) {
                     val speedMs = locationOverlay.myLocationProvider?.lastKnownLocation?.speed ?: 0f
                     val speedKmh = (speedMs * 3.6).toInt()
+                    
+                    // Update buffering logic for low-speed recovery
+                    detectionManager.onSpeedUpdate(speedKmh)
+
                     if (speedKmh > maxSpeedKmh) maxSpeedKmh = speedKmh
                     withContext(Dispatchers.Main) {
                         val monitoringOn = binding.toggleMonitoring.isChecked
@@ -203,7 +213,7 @@ class MainActivity : AppCompatActivity() {
                             binding.monitoringStatus.text = "MONITORING ACTIVE"
                             binding.monitoringStatus.setTextColor(Color.parseColor("#00FFC2"))
                         }
-                        binding.speedValue.text = "$speedKmh km/h"
+                        binding.speedValue.text = "$speedKmh"
                     }
 
                     // Hazard Proximity Detection
@@ -230,11 +240,13 @@ class MainActivity : AppCompatActivity() {
                 val speedMs = locationOverlay.myLocationProvider?.lastKnownLocation?.speed ?: 0f
                 (speedMs * 3.6).toInt()
             }) { type, intensity ->
-                detectionManager.onSensorDetection(type, intensity)
+                val speedKmh = (locationOverlay.myLocationProvider?.lastKnownLocation?.speed ?: 0f * 3.6).toInt()
+                val loc = locationOverlay.myLocation ?: locationOverlay.myLocationProvider?.lastKnownLocation?.let { GeoPoint(it) }
+                detectionManager.onSensorDetection(type, intensity, speedKmh, loc)
             }
             
             // monitoring toggle logic
-            val isMonitoringEnabled = sharedPrefs.getBoolean("pref_monitoring_enabled", true)
+            val isMonitoringEnabled = sharedPrefs.getBoolean("pref_monitoring_enabled", SessionManager.isLoggedIn(this))
             binding.toggleMonitoring.isChecked = isMonitoringEnabled
 
             binding.toggleMonitoring.setOnCheckedChangeListener { _, isChecked ->
@@ -242,7 +254,11 @@ class MainActivity : AppCompatActivity() {
                 if (isChecked) {
                     bumpDetector.start()
                     startSwitchPulse()
-                    Toast.makeText(this, "Monitoring Enabled", Toast.LENGTH_SHORT).show()
+                    if (!SessionManager.isLoggedIn(this)) {
+                        Toast.makeText(this, "⚠️ Active Monitoring: Saved locally. Sign in to sync to cloud.", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "Monitoring Enabled", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     bumpDetector.stop()
                     stopSwitchPulse()
@@ -312,7 +328,7 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            // setupSearchBar()
+            setupSearchBar()
 
             // Apply the correct nav state for the current session
             updateNavForRole()
@@ -385,7 +401,6 @@ class MainActivity : AppCompatActivity() {
     // ── Search Bar ─────────────────────────────────────────────────────────────
 
     private fun setupSearchBar() {
-        /* Search logic hidden for Cyber-Sleek UI
         val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, mutableListOf()) {
             override fun getFilter(): android.widget.Filter {
                 return object : android.widget.Filter() {
@@ -396,9 +411,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        binding.searchPlace?.setAdapter(adapter)
+        binding.searchPlace.setAdapter(adapter)
 
-        binding.searchPlace?.addTextChangedListener(object : TextWatcher {
+        binding.searchPlace.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
@@ -407,11 +422,11 @@ class MainActivity : AppCompatActivity() {
                 searchJob?.cancel()
                 searchJob = lifecycleScope.launch(Dispatchers.IO) {
                     delay(500)
-                    withContext(Dispatchers.Main) { binding.searchProgress?.visibility = View.VISIBLE }
+                    withContext(Dispatchers.Main) { binding.searchProgress.visibility = View.VISIBLE }
                     val loc     = locationOverlay.myLocation
                     val results = routingManager.searchPlaces(query, loc?.latitude, loc?.longitude)
                     withContext(Dispatchers.Main) {
-                        binding.searchProgress?.visibility = View.GONE
+                        binding.searchProgress.visibility = View.GONE
                         searchResults = results
                         adapter.clear()
                         if (results.isEmpty()) adapter.add("No result found")
@@ -424,8 +439,8 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        binding.searchPlace?.setOnItemClickListener { _, _, position, _ ->
-            if (searchResults.isEmpty()) { binding.searchPlace?.setText(""); return@setOnItemClickListener }
+        binding.searchPlace.setOnItemClickListener { _, _, position, _ ->
+            if (searchResults.isEmpty()) { binding.searchPlace.setText(""); return@setOnItemClickListener }
             val feature = searchResults.getOrNull(position) ?: return@setOnItemClickListener
             val dest    = GeoPoint(feature.geometry.coordinates[1], feature.geometry.coordinates[0])
             val start   = locationOverlay.myLocation
@@ -440,10 +455,17 @@ class MainActivity : AppCompatActivity() {
             map.controller.animateTo(dest)
             map.controller.setZoom(16.0)
             calculateAndDrawRoute(start, dest)
-            binding.searchPlace?.dismissDropDown()
-            binding.searchPlace?.clearFocus()
+            binding.searchPlace.dismissDropDown()
+            binding.searchPlace.clearFocus()
         }
-        */
+
+        binding.searchPlace.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.hideSoftInputFromWindow(binding.searchPlace.windowToken, 0)
+                true
+            } else false
+        }
     }
 
     // ── Map Gestures ───────────────────────────────────────────────────────────

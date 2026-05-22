@@ -47,6 +47,14 @@ object PotholeRepository {
     }
 
     private fun pushToCloud(context: Context, pothole: PotholeData) {
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            CoroutineScope(Dispatchers.Main).launch {
+                android.widget.Toast.makeText(context, "⚠️ Saved locally. Sign in to sync to cloud.", android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 withContext(Dispatchers.Main) {
@@ -59,7 +67,9 @@ object PotholeRepository {
                     "type" to pothole.type.name,
                     "intensity" to pothole.intensity,
                     "severity" to pothole.severity.name,
-                    "timestamp" to pothole.timestamp
+                    "timestamp" to pothole.timestamp,
+                    "userId" to currentUser.uid,
+                    "email" to (currentUser.email ?: "")
                 )
 
                 withTimeout(15000L) {
@@ -84,6 +94,24 @@ object PotholeRepository {
         }
     }
 
+    private fun pushToCloudSilent(pothole: PotholeData) {
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser ?: return
+        val data = hashMapOf(
+            "lat" to pothole.location.latitude,
+            "lon" to pothole.location.longitude,
+            "type" to pothole.type.name,
+            "intensity" to pothole.intensity,
+            "severity" to pothole.severity.name,
+            "timestamp" to pothole.timestamp,
+            "userId" to currentUser.uid,
+            "email" to (currentUser.email ?: "")
+        )
+        firestore.collection("potholes").add(data)
+            .addOnFailureListener { e ->
+                Log.e("RoadWise-Cloud", "Silent sync failed for pothole at ${pothole.timestamp}", e)
+            }
+    }
+
     fun fetchFromCloud(context: Context, onComplete: (List<PotholeData>) -> Unit) {
         firestore.collection("potholes").orderBy("timestamp", Query.Direction.DESCENDING).limit(500).get()
             .addOnSuccessListener { result ->
@@ -105,6 +133,20 @@ object PotholeRepository {
                     }
                 }
                 val local = getAllPotholes(context)
+
+                // If authenticated, sync local-only potholes (offline records) to the cloud
+                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (currentUser != null) {
+                    val localOnly = local.filter { localItem -> cloud.none { it.timestamp == localItem.timestamp } }
+                    if (localOnly.isNotEmpty()) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            for (pothole in localOnly) {
+                                pushToCloudSilent(pothole)
+                            }
+                        }
+                    }
+                }
+
                 val combined = (local + cloud).distinctBy { it.timestamp }.sortedByDescending { it.timestamp }
                 saveAll(context, combined)
                 cached = combined
@@ -120,15 +162,18 @@ object PotholeRepository {
         potholes.removeAll { it.timestamp == timestamp }
         saveAllInternal(context, potholes)
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val task = firestore.collection("potholes").whereEqualTo("timestamp", timestamp).get()
-                val result = com.google.android.gms.tasks.Tasks.await(task)
-                for (doc in result.documents) {
-                    com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val task = firestore.collection("potholes").whereEqualTo("timestamp", timestamp).get()
+                    val result = com.google.android.gms.tasks.Tasks.await(task)
+                    for (doc in result.documents) {
+                        com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
+                    }
+                } catch (e: Exception) {
+                    Log.e("RoadWise-Repo", "Failed to delete pothole from Firebase", e)
                 }
-            } catch (e: Exception) {
-                Log.e("RoadWise-Repo", "Failed to delete pothole from Firebase", e)
             }
         }
     }
@@ -143,12 +188,15 @@ object PotholeRepository {
                 saveAllInternal(context, localData)
 
                 // 2. Remove from Firebase
-                val chunks = timestampsToRemove.chunked(10) // Firestore 'in' queries are limited to 10
-                for (chunk in chunks) {
-                    val task = firestore.collection("potholes").whereIn("timestamp", chunk).get()
-                    val result = com.google.android.gms.tasks.Tasks.await(task)
-                    for (doc in result.documents) {
-                        com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
+                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (currentUser != null) {
+                    val chunks = timestampsToRemove.chunked(10) // Firestore 'in' queries are limited to 10
+                    for (chunk in chunks) {
+                        val task = firestore.collection("potholes").whereIn("timestamp", chunk).get()
+                        val result = com.google.android.gms.tasks.Tasks.await(task)
+                        for (doc in result.documents) {
+                            com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
+                        }
                     }
                 }
 

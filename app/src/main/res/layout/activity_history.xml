@@ -49,24 +49,21 @@
                 android:fontFamily="sans-serif-medium"
                 android:letterSpacing="0.15" />
 
-            <com.google.android.material.card.MaterialCardView
+            <com.google.android.material.button.MaterialButton
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/glass_surface"
-                app:cardCornerRadius="999dp"
-                app:strokeColor="@color/glass_border"
-                app:strokeWidth="1dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"
-                    android:text="EXPORT"
-                    android:textColor="@color/electric_gold"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.1" />
-            </com.google.android.material.card.MaterialCardView>
+                android:layout_height="32dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="16dp"
+                android:text="EXPORT"
+                android:textSize="10sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.1"
+                android:textColor="@color/emerald_neon"
+                app:strokeColor="@color/emerald_neon"
+                app:strokeWidth="1dp"
+                app:cornerRadius="999dp" />
         </LinearLayout>
 
         <!-- Title row -->
@@ -167,16 +164,19 @@
     <!-- ══════════════════════════════════════════ -->
     <!-- EXPORT FAB                                 -->
     <!-- ══════════════════════════════════════════ -->
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnExportPdf"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="54dp"
         android:layout_margin="24dp"
-        android:text="Export PDF"
+        android:text="EXPORT PDF"
+        android:textSize="14sp"
+        android:textStyle="bold"
         android:textColor="@color/obsidian_background"
         android:fontFamily="sans-serif-medium"
-        android:letterSpacing="0.05"
-        app:backgroundTint="@color/electric_gold"
+        android:letterSpacing="0.06"
+        app:backgroundTint="@color/emerald_neon"
+        app:cornerRadius="999dp"
         app:icon="@drawable/ic_export"
         app:iconTint="@color/obsidian_background"
         app:layout_constraintBottom_toBottomOf="parent"

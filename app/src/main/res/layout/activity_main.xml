@@ -74,7 +74,7 @@
     <!-- ══════════════════════════════════════════ -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/statsCard"
-        android:layout_width="148dp"
+        android:layout_width="160dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginBottom="16dp"
@@ -104,35 +104,74 @@
                 android:orientation="vertical"
                 android:padding="14dp">
 
-                <!-- Speed Block -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <!-- Top Row: Speed and Hazards -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="VELOCITY"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.12"
-                    android:textColor="@color/text_low"
-                    android:textSize="9sp" />
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
 
-                <TextView
-                    android:id="@+id/speedValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="@color/text_high"
-                    android:fontFamily="monospace"
-                    android:textStyle="bold"
-                    android:textSize="36sp"
-                    android:lineSpacingMultiplier="0.85" />
+                    <!-- Speed Block -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SPEED"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.12"
+                            android:textColor="@color/text_low"
+                            android:textSize="9sp" />
+                        
+                        <TextView
+                            android:id="@+id/speedValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/text_high"
+                            android:fontFamily="monospace"
+                            android:textStyle="bold"
+                            android:textSize="22sp" />
+                        
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="km/h"
+                            android:textColor="@color/text_low"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="8sp"
+                            android:layout_marginTop="-4dp" />
+                    </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="km/h"
-                    android:textColor="@color/text_low"
-                    android:fontFamily="sans-serif-medium"
-                    android:textSize="10sp"
-                    android:layout_marginTop="-4dp" />
+                    <!-- Hazard Count Block -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="end">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="HAZARDS"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.12"
+                            android:textColor="@color/text_low"
+                            android:textSize="9sp" />
+                        <TextView
+                            android:id="@+id/potholeCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/emerald_neon"
+                            android:fontFamily="monospace"
+                            android:textStyle="bold"
+                            android:textSize="22sp" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <!-- Divider -->
                 <View
@@ -141,61 +180,46 @@
                     android:layout_marginVertical="10dp"
                     android:background="@color/glass_border" />
 
-                <!-- Hazard Count Block -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="HAZARDS"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.12"
-                    android:textColor="@color/text_low"
-                    android:textSize="9sp" />
-
-                <TextView
-                    android:id="@+id/potholeCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="@color/emerald_neon"
-                    android:fontFamily="monospace"
-                    android:textStyle="bold"
-                    android:textSize="36sp"
-                    android:lineSpacingMultiplier="0.85" />
-
-                <!-- Divider -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="10dp"
-                    android:background="@color/glass_border" />
-
-                <!-- Monitoring Toggle Row -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="MONITORING"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.12"
-                    android:textColor="@color/text_low"
-                    android:textSize="9sp" />
-
-                <TextView
-                    android:id="@+id/monitoringStatus"
+                <!-- Bottom Row: Monitoring Toggle -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="--"
-                    android:textColor="@color/text_med"
-                    android:fontFamily="sans-serif-medium"
-                    android:textSize="11sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/toggleMonitoring"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:checked="true"
-                    app:useMaterialThemeColors="true" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MONITORING"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.12"
+                            android:textColor="@color/text_low"
+                            android:textSize="9sp" />
+                        <TextView
+                            android:id="@+id/monitoringStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
+                            android:text="--"
+                            android:textColor="@color/text_med"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/toggleMonitoring"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        app:thumbTint="@color/switch_thumb_tint"
+                        app:trackTint="@color/switch_track_tint"
+                        app:useMaterialThemeColors="false" />
+                </LinearLayout>
 
             </LinearLayout>
         </LinearLayout>

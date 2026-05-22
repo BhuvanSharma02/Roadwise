@@ -18,6 +18,7 @@ import com.roadwise.R
 import com.roadwise.models.PotholeData
 import com.roadwise.sensors.BumpDetector
 import com.roadwise.sensors.RoadFeature
+import com.roadwise.utils.DetectionManager
 import com.roadwise.utils.Severity
 import com.roadwise.utils.PotholeRepository
 import com.roadwise.utils.SafetyAlertManager
@@ -30,6 +31,7 @@ class DriveGuardService : Service() {
     private lateinit var safetyAlertManager: SafetyAlertManager
     private lateinit var bumpDetector: BumpDetector
     private lateinit var sharedPrefs: SharedPreferences
+    private lateinit var detectionManager: DetectionManager
     
     private var currentSpeedKmh = 0
     private var detectionCount = 0
@@ -41,28 +43,24 @@ class DriveGuardService : Service() {
         sharedPrefs = getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
         safetyAlertManager = SafetyAlertManager(this)
         
+        detectionManager = DetectionManager { type, severity, intensity, loc ->
+            val data = PotholeData(loc, type, intensity, severity, System.currentTimeMillis(), emptyList())
+            PotholeRepository.savePothole(this, data)
+            detectionCount++
+            updateNotification(currentSpeedKmh)
+        }
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         
         bumpDetector = BumpDetector(
             this,
             { currentSpeedKmh },
             { type, intensity ->
-                // Registered from background
                 val isMonitoringEnabled = sharedPrefs.getBoolean("pref_monitoring_enabled", true)
-                if (!isMonitoringEnabled) {
-                    Log.d("DriveGuardService", "Passive mode: skipping record for $type")
-                    return@BumpDetector
-                }
+                if (!isMonitoringEnabled) return@BumpDetector
 
                 val lastLoc = lastLocation
-                if (lastLoc != null) {
-                    val severity = com.roadwise.utils.Severity.MEDIUM // Background default
-                    val data = PotholeData(GeoPoint(lastLoc), type, intensity, severity, System.currentTimeMillis(), emptyList())
-                    PotholeRepository.savePothole(this, data)
-                    
-                    detectionCount++
-                    updateNotification(currentSpeedKmh)
-                }
+                detectionManager.onSensorDetection(type, intensity, currentSpeedKmh, lastLoc?.let { GeoPoint(it) })
             }
         )
 
@@ -90,6 +88,8 @@ class DriveGuardService : Service() {
                     lastLocation = location
                     currentSpeedKmh = (location.speed * 3.6).toInt()
                     
+                    // Trigger buffered detection recovery
+                    detectionManager.onSpeedUpdate(currentSpeedKmh)
                     
                     // Update Notification
                     updateNotification(currentSpeedKmh)
