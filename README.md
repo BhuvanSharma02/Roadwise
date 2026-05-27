@@ -41,7 +41,6 @@ Despite the scale of this crisis, most municipal road monitoring still relies on
 | 🔊 | **FFT Spectral Analysis** | Distinguishes potholes from speed breakers using frequency-domain signal features |
 | 📍 | **GPS Geo-Tagging + Severity** | Every event is tagged with location and classified as Low / Medium / High severity |
 | 🗺️ | **Live Road Health Heatmap** | Interactive map showing pothole hotspots updated in real time from crowdsourced data |
-| 📴 | **Offline Capable** | Events are queued locally and synced to the cloud once connectivity is restored |
 | 🔒 | **Privacy-First** | No continuous audio/video recording; only accelerometer and GPS data are used |
 | 🤝 | **Crowdsourced Confidence** | Multiple user reports of the same event increase confidence scoring for authorities |
 
@@ -123,7 +122,7 @@ The end-to-end detection and reporting pipeline runs as follows:
 5. **FFT Transform** — Each window is converted to the frequency domain; spectral features are extracted.
 6. **Classification** — The on-device TFLite model classifies the segment as: `Normal`, `Speed Breaker`, or `Pothole`, along with a severity score.
 7. **GPS Tagging** — If a pothole is detected, the Fused Location Provider captures the precise GPS coordinate at the moment of impact.
-8. **Firebase Upload** — The event payload (location, severity, timestamp, features) is pushed to Firestore. If offline, it is queued locally in Room DB.
+8. **Firebase Upload** — The event payload (location, severity, timestamp, features) is pushed to Firestore. If offline, it is queued locally in DB.
 9. **Dashboard Update** — The civic dashboard updates the heatmap and severity layer in real time.
 10. **Driver Alert** — A non-intrusive haptic + visual notification is shown to the driver for awareness.
 
@@ -181,8 +180,6 @@ RoadWise/
 - Android device with API 26+ (Android 8.0 Oreo or higher)
 - Python 3.8+ with `pip`
 - A Firebase project with Firestore and Authentication enabled
-- Google Maps API key (or osmdroid for offline maps)
-
 ---
 
 ### 📱 Android App Setup
