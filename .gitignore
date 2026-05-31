@@ -37,9 +37,10 @@ temp_files.txt
 # Raw data / sample files
 *.json
 
-# Binary model files (download separately or use Git LFS)
-*.onnx
+# Binary model files — exclude loose onnx/tflite files at root
+# road_model.onnx is intentionally tracked inside app/src/main/assets/
 *.tflite
+!app/src/main/assets/road_model.onnx
 
 # Design mockup files
 stitch_designs/

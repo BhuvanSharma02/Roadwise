@@ -100,11 +100,7 @@ sdk.dir=C\:\\Users\\YourUser\\AppData\\Local\\Android\\Sdk
 ORS_API_KEY=your_key_here
 ```
 
-**4. ONNX model**
-
-Place `road_model.onnx` at `app/src/main/assets/road_model.onnx`.
-
-**5. Build**
+**4. Build**
 ```bash
 ./gradlew installDebug
 ```
@@ -124,7 +120,7 @@ Output classes:
 
 Severity is determined separately from the RMS and peak amplitude values, not by the classifier.
 
-> The model file is not in this repo (size). Place `road_model.onnx` in `app/src/main/assets/` before building.
+> The model file (`road_model.onnx`) is included in this repository under `app/src/main/assets/`.
 
 ---
 
