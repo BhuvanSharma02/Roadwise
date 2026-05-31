@@ -49,7 +49,6 @@ This design makes RoadWise lightweight, privacy-preserving, and capable of worki
 | Build | Gradle AGP | 8.x |
 | SDK | Min 24 / Target 36 / Compile 36 | — |
 | ML Inference | ONNX Runtime for Android | 1.26.0 |
-| Signal Processing | JTransforms (FFT) | 3.2 |
 | Maps | osmdroid | 6.1.20 |
 | Location | Fused Location Provider (play-services-location) | 21.3.0 |
 | Routing API | OpenRouteService v2 | — |
@@ -85,7 +84,7 @@ RoadWise App
 |   |-- AdaptiveRoadOverlay  <- Zoom-aware: A–F grid at low zoom, blobs at high zoom
 |
 |-- sensors/
-|   |-- BumpDetector         <- Accelerometer state machine + FFT + ONNX inference
+|   |-- BumpDetector         <- Accelerometer windowing + statistical features + ONNX inference
 |
 |-- services/
 |   |-- DriveGuardService    <- Foreground service for background sensing
@@ -200,33 +199,40 @@ Detection uses a **sensor-only pipeline** for on-device road event classificatio
 ### Stage 1 — Signal Acquisition (BumpDetector)
 
 ```
-Accelerometer Z-axis (100Hz) → Low-pass Filter → 256-sample Window (50% overlap)
+Linear Accelerometer (20Hz) → Gravity projection (Earth-Z) → 40-sample Window (50% overlap)
 ```
 
-- `BumpDetector` registers a `SensorEventListener` for `TYPE_ACCELEROMETER`.
-- Raw Z-axis data is collected into a rolling window of 256 samples.
-- A **state machine** detects initial threshold crossings (configurable via `pref_sensor_threshold`).
+- `BumpDetector` registers a `SensorEventListener` for `TYPE_LINEAR_ACCELERATION` and `TYPE_GRAVITY`.
+- The gravity vector is used to project the raw linear acceleration onto the true Earth-vertical axis, making it orientation-agnostic (works regardless of phone placement).
+- Data is collected into a circular buffer of **40 samples** (2 seconds at 20 Hz) with **50% overlap** (step size 20).
+- A configurable threshold check (`pref_sensor_threshold`, default 1.2 m/s²) pre-filters the window before running inference — windows that don't exceed the threshold are discarded without running the model.
 
-### Stage 2 — Spectral Feature Extraction & ONNX Inference
+### Stage 2 — Statistical Feature Extraction & ONNX Inference
 
 ```
-Windowed Signal → FFT (JTransforms) → 8 Features → ONNX Runtime → Classification
+Windowed Signal → 12 Time-Domain Features → ONNX Runtime → Classification + Confidence
 ```
 
-The `DetectionManager` (via ONNX Runtime) classifies each window using 8 features:
+Features are computed entirely in the time domain — no FFT is used. `BumpDetector.extract12Features()` computes:
 
 | Feature | Description |
 |---------|-------------|
-| Peak Frequency | Dominant FFT bin (Hz) |
-| Spectral Energy | Total power across spectrum |
-| Energy Distribution | Ratio across low / mid / high bands |
-| Spectral Variance | Spread of energy across frequency bins |
-| Peak Amplitude | Max instantaneous acceleration value |
-| RMS | Effective signal magnitude |
-| Kurtosis | Statistical sharpness; high for impulse events |
-| Zero Crossing Rate | Differentiates smooth vs abrupt waveforms |
+| Z Mean | Mean of gravity-projected vertical acceleration (after DC removal) |
+| Z Std | Standard deviation of vertical signal |
+| Z Max | Peak positive value in the window |
+| Z Min | Peak negative value in the window |
+| Z Peak-to-Peak | zMax − zMin; overall impact magnitude |
+| Z RMS | Root mean square; effective signal energy |
+| X Std | Lateral (side-to-side) signal standard deviation |
+| Y Std | Longitudinal (fore-aft) signal standard deviation |
+| Z Energy | Sum of squared values; total signal power |
+| Z Skewness | Pearson skewness; asymmetry of the impact waveform |
+| Z Kurtosis | Excess kurtosis (−3); sharpness; high for impulse-type events |
+| Impact Ratio | Fraction of samples exceeding the sensitivity threshold |
 
-**Output classes:** `0` = Normal Road, `1` = Speed Breaker, `2` = Pothole
+**Output classes:** `0` = Normal (Smooth), `1` = Speed Breaker, `2` = Pothole
+
+Inference requires **≥ 70% confidence** to fire an event. Lower-confidence windows are silently dropped. Classification runs in `BumpDetector.analyzeWindow()`, not DetectionManager — the ONNX model is wrapped in `RoadModelInference`.
 
 ### Stage 3 — Speed-Buffered Verification (DetectionManager)
 

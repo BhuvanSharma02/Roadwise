@@ -43,10 +43,10 @@ India has ~9,438 pothole deaths in 2020–2024 (MoRTH data). Most road monitorin
 
 ## How Detection Works
 
-1. `BumpDetector` reads accelerometer Z-axis at ~100 Hz
-2. Signal is windowed into 256-sample chunks with 50% overlap
-3. FFT extracts 8 features: peak frequency, spectral energy, energy distribution, variance, peak amplitude, RMS, kurtosis, zero crossing rate
-4. `DetectionManager` passes features to the ONNX model → classifies as Normal / Speed Breaker / Pothole
+1. `BumpDetector` reads `TYPE_LINEAR_ACCELERATION` at 20 Hz (50ms interval), plus `TYPE_GRAVITY` for orientation-agnostic vertical projection
+2. Signal is windowed into 40-sample chunks at 20 Hz (2 seconds), with 50% overlap
+3. 12 time-domain statistical features extracted: Z mean, std, max, min, peak-to-peak, RMS, X std, Y std, energy, skewness, kurtosis, impact ratio
+4. Features passed to the ONNX model (`RoadModelInference`) → classifies as Normal / Speed Breaker / Pothole with a confidence score; events below 70% confidence are dropped
 5. At speeds under 8 km/h, detections are buffered until speed recovers (avoids false positives from slow rolling)
 6. On confirmation: GPS coordinate captured, event saved locally and pushed to Firestore
 
