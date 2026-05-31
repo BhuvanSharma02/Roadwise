@@ -1,6 +1,6 @@
 # RoadWise — Technical Documentation
 
-**Version:** 1.0 | **Platform:** Android (Native Kotlin) | **Min SDK:** 24 (Android 7.0) | **Target SDK:** 34
+**Version:** 1.0 | **Platform:** Android (Native Kotlin) | **Min SDK:** 24 (Android 7.0) | **Target SDK:** 36
 
 ---
 
@@ -24,19 +24,20 @@
 
 ## 1. Project Overview
 
-RoadWise is a native Android application designed to **detect, record, map, and navigate around road hazards** in real-time. The app uses a dual-sensor approach combining a **machine learning computer vision model** via the rear camera with a **physical accelerometer** to achieve high-confidence, location-stamped hazard detection.
+RoadWise is a native Android application that **detects, records, maps, and helps navigate around road hazards** in real-time. The app uses a **sensor-only approach** — the smartphone's accelerometer combined with on-device ONNX model inference — to classify road events without any camera input.
 
-Detected hazards are visualized on a live map using two adaptive views that switch based on zoom level, allowing users to understand road quality at both a neighbourhood scale and a street-level scale.
+This design makes RoadWise lightweight, privacy-preserving, and capable of working in all lighting conditions, including night and tunnels.
 
 ### Key Goals
 | Goal | Solution |
 |------|----------|
-| Detect potholes/speed bumps without manual input | ML + Sensor Fusion pipeline |
-| Prevent false positives (rough roads, car noise) | Two-stage cross-correlation verification |
-| Understand road quality at scale | A-F Grading Engine on 100m grid cells |
-| Navigate safely away from hazards | OpenRouteService with Pothole Avoidance Polygons |
-| Compare multiple route options | Multi-candidate alternate route rendering |
-| Test system without driving | Built-in Map Simulation Tool |
+| Detect potholes/speed bumps without manual input | Accelerometer + FFT + ONNX on-device inference |
+| Prevent false positives (low-speed bumps, speed transitions) | Speed-buffered verification in DetectionManager |
+| Understand road quality at scale | A–F Grading Engine on 100m grid cells (AdaptiveRoadOverlay) |
+| Navigate with hazard awareness | OpenRouteService with pothole avoidance polygons |
+| Compare multiple route options | RouteAnalysisActivity with multi-route risk scoring |
+| Test system without driving | Built-in Simulator (long-press map) |
+| Sync data across users | Firebase Firestore with offline-first local cache |
 
 ---
 
@@ -46,55 +47,60 @@ Detected hazards are visualized on a live map using two adaptive views that swit
 | Component | Library / Version |
 |---|---|
 | Language | Kotlin |
-| Build System | Gradle (AGP 8.1.0 / Gradle 8.7) |
-| Architecture | MVVM-inspired with Activity components |
+| Build System | Gradle (AGP 8.x) |
+| Architecture | Component-oriented with Activities + Coroutines |
 | Minimum SDK | API 24 (Android 7.0 Nougat) |
-| Target SDK | API 34 (Android 14) |
-| Compile SDK | 34 |
+| Target SDK | API 36 |
+| Compile SDK | 36 |
 | View Binding | Enabled |
+| BuildConfig Fields | Enabled |
 
-### Computer Vision & AI
+### AI & Signal Processing
 | Component | Library / Version |
 |---|---|
-| Camera Pipeline | CameraX 1.3.x (camera-core, camera-camera2, camera-lifecycle, camera-view) |
-| ML Inference | Google ML Kit Object Detection with Custom Models (mlkit:object-detection-custom:17.0.1) |
-| On-Device Model | Custom TFLite model `pothole_model.tflite` |
+| On-Device Inference | ONNX Runtime for Android 1.26.0 |
+| On-Device Model | `road_model.onnx` (placed in `app/src/main/assets/`) |
+| FFT Library | JTransforms 3.2 |
 
 ### Maps & Location
 | Component | Library / Version |
 |---|---|
-| Map Rendering | osmdroid 6.1.18 |
+| Map Rendering | osmdroid 6.1.20 |
 | Map Tiles | OpenStreetMap (MAPNIK) |
-| Location Provider | Android GpsMyLocationProvider via osmdroid |
-| Overlay Drawing | Custom Overlay subclass (AdaptiveRoadOverlay) |
+| Location Provider | Fused Location Provider (play-services-location 21.3.0) |
+| Map Overlay | AdaptiveRoadOverlay + HeatmapOverlay (custom Overlay subclasses) |
 
 ### Networking
 | Component | Library / Version |
 |---|---|
-| HTTP Client | Retrofit 2.9.0 + OkHttp 4.11.0 |
-| JSON Serialization | Gson 2.10.1 + Retrofit Converter |
+| HTTP Client | Retrofit 3.0.0 + OkHttp 5.x |
+| JSON Serialization | Gson 2.14.0 + Retrofit Converter |
 | Geocoding API | Photon by Komoot (https://photon.komoot.io/) |
 | Routing API | OpenRouteService v2 (https://api.openrouteservice.org/) |
+
+### Cloud & Auth
+| Component | Library / Version |
+|---|---|
+| Database | Firebase Firestore (firebase-bom 34.x) |
+| Authentication | Firebase Auth (email/password) |
 
 ### Persistence
 | Component | Library / Version |
 |---|---|
 | Local Storage | Android SharedPreferences |
 | Serialization | Gson (JSON) |
-| Image Files | App scoped external storage (getExternalFilesDir) |
 
 ### Concurrency
 | Component | Library / Version |
 |---|---|
-| Async Processing | Kotlin Coroutines (kotlinx-coroutines-android:1.7.3) |
-| Lifecycle Safety | lifecycle-runtime-ktx:2.6.2 + lifecycleScope |
+| Async Processing | Kotlin Coroutines (kotlinx-coroutines-android 1.11.0) |
+| Lifecycle Safety | lifecycle-runtime-ktx 2.10.0 + lifecycleScope |
 
 ### UI
 | Component | Library / Version |
 |---|---|
-| Material Components | MDC Android 1.10.0 |
-| Preference Screen | androidx.preference:preference-ktx:1.2.1 |
-| RecyclerView | Part of Material/AndroidX standard |
+| Material Components | MDC Android 1.14.0 |
+| Preference Screen | androidx.preference:preference-ktx 1.2.1 |
 
 ---
 
@@ -104,36 +110,46 @@ RoadWise follows a **modular, component-oriented** structure. Business logic is 
 
 ```
 RoadWise App
-|-- MainActivity         <- Central orchestrator (UI, map, camera, routing)
-|-- HistoryActivity      <- Detection history browser + PDF export
-|-- SettingsActivity     <- All user preferences
-|
-|-- camera/
-|   |-- PotholeAnalyzer  <- CameraX ImageAnalysis.Analyzer (ML inference)
-|   |-- GraphicOverlay   <- Canvas-based live bounding box renderer
-|
-|-- sensors/
-|   |-- BumpDetector     <- Accelerometer state machine
+|-- SplashActivity         <- Animated launch screen
+|-- LoginActivity          <- Firebase Auth (email/password)
+|-- MainActivity           <- Central orchestrator (map, detection, routing, HUD)
+|-- OverviewActivity       <- Admin hotspot dashboard with heatmap & filters
+|-- HistoryActivity        <- Drive history log + PDF export
+|-- RouteAnalysisActivity  <- Multi-route comparison and risk scoring
+|-- SettingsActivity       <- All user preferences
+|-- AccountActivity        <- User profile and sign-out
+|-- RedeemActivity         <- Reward points & redemption screen
 |
 |-- mapping/
-|   |-- AdaptiveRoadOverlay <- Custom osmdroid Overlay for A-F grid & heatmap
+|   |-- HeatmapOverlay       <- Custom osmdroid overlay (radial glow per cluster)
+|   |-- AdaptiveRoadOverlay  <- Zoom-aware: A–F grid at low zoom, blobs at high zoom
+|
+|-- sensors/
+|   |-- BumpDetector         <- Accelerometer state machine + FFT + ONNX inference
+|
+|-- services/
+|   |-- DriveGuardService    <- Foreground service for background sensing
+|   |-- DrivingReceiver      <- Activity Recognition broadcast receiver
+|   |-- BootReceiver         <- Re-registers transitions on device boot
 |
 |-- routing/
-|   |-- RoutingManager   <- Facade for ORS + Photon APIs
-|   |-- OpenRouteServiceApi <- Retrofit interface for ORS
-|   |-- PhotonApi        <- Retrofit interface for geocoding
-|   |-- RoutingModels    <- All request/response data classes
-|   |-- BoundingBoxUtils <- Polygon helpers for avoidance zones
+|   |-- RoutingManager       <- Facade for ORS + Photon APIs
+|   |-- OpenRouteServiceApi  <- Retrofit interface for ORS
+|   |-- PhotonApi            <- Retrofit interface for geocoding
+|   |-- RoutingModels        <- All request/response data classes
+|   |-- BoundingBoxUtils     <- Polygon helpers for avoidance zones
 |
 |-- models/
-|   |-- PotholeData      <- Core detection data class
+|   |-- PotholeData          <- Core detection data class
 |
 |-- utils/
-    |-- DetectionManager  <- Cross-correlates camera + sensor events
-    |-- PotholeRepository <- Singleton data store (SharedPrefs + Gson)
-    |-- RoadQualityScorer <- Grid bucketing and A-F grading engine
-    |-- ImageAnalyzer     <- Burst image sharpness analyser (Laplacian)
-    |-- PotholeAdapter    <- RecyclerView Adapter for history list
+    |-- DetectionManager     <- Speed-buffered verification (fires/buffers sensor events)
+    |-- PotholeRepository    <- Singleton data store (SharedPrefs + Gson + Firestore)
+    |-- RoadQualityScorer    <- Grid bucketing and A–F grading engine
+    |-- SessionManager       <- Login state, admin role, GPS distance + reward points
+    |-- SafetyAlertManager   <- Proximity hazard alerts and in-app notifications
+    |-- ActivityTransitionHelper <- Activity Recognition API registration
+    |-- PotholeAdapter       <- RecyclerView Adapter for history list
 ```
 
 ---
@@ -143,35 +159,52 @@ RoadWise App
 ### 4.1 MainActivity
 The central controller of the app. Responsible for:
 - Wiring all components together
-- Managing the CameraX lifecycle
-- Coordinating the DetectionManager callback with map and repository updates
-- Handling map gestures (single-tap for destination, long-press for simulation)
-- Multi-route fetch and polyline management
-- Zoom-aware toggle of the road quality legend
+- Managing BumpDetector lifecycle (start/stop on toggle)
+- Coordinating DetectionManager callback with map and repository updates
+- Real-time speed reading from FusedLocationProvider
+- Accumulating drive distance per second in SessionManager
+- Map gestures: single-tap for destination, long-press for simulator
+- Multi-route fetch → RouteAnalysisActivity → navigation mode
+- Zoom-aware toggle of the AdaptiveRoadOverlay and legend
+- Role-based nav bar (admin sees Overview tab)
 
 ### 4.2 HistoryActivity
-- Displays a scrollable RecyclerView of all recorded detections.
-- Each card shows: type badge, intensity bar, GPS coordinates, timestamp, and embedded thumbnail.
-- Supports PDF Export of the entire session (detection list + photos) to device storage.
+- Displays a scrollable RecyclerView of all recorded detections (filtered by role).
+- Each card shows: type badge, intensity bar, GPS coordinates, timestamp.
+- Supports **PDF Export** of the detection list to device cache, shared via FileProvider.
 - Supports delete of individual records.
+- Admin users see all detections; standard users see only their own.
 
-### 4.3 SettingsActivity
-Uses PreferenceFragmentCompat to deliver a standard settings UI. All preferences are persisted to `roadwise_prefs` SharedPreferences.
+### 4.3 OverviewActivity
+- Admin-only hotspot map with `HeatmapOverlay`.
+- Severity filter chips (All / Critical / Moderate).
+- Hotspot list sheet with road addresses (reverse geocoded via Android Geocoder).
+- Resolve hotspot action: batch-deletes all pothole records in an area from Firestore.
+- CSV export of all data, shared via FileProvider.
+
+### 4.4 RouteAnalysisActivity
+- Receives up to 3 route candidates from MainActivity.
+- Displays distance, estimated travel time (formatted as hours + minutes for long routes), pothole count, and bump count per route.
+- User selects a route → result returned to MainActivity → navigation mode starts.
+
+### 4.5 SettingsActivity
+Manages all preferences in `roadwise_prefs` SharedPreferences via custom XML-binding UI (not PreferenceFragmentCompat).
 
 ---
 
 ## 5. Core Data Model
 
 ### PotholeData
-Every detection is stored as a PotholeData instance.
+Every detection is stored as a `PotholeData` instance.
 
 ```kotlin
 data class PotholeData(
-    val location: GeoPoint,       // GPS coordinate of the hazard
-    val type: RoadFeature,        // POTHOLE, SPEED_BUMP, or UNKNOWN
-    val intensity: Float,         // G-force delta magnitude (0.0 to 3.0+)
-    val timestamp: Long,          // Unix epoch in milliseconds
-    val imagePaths: List<String>  // Paths to captured JPG frames on disk
+    val location: GeoPoint,        // GPS coordinate of the hazard
+    val type: RoadFeature,         // POTHOLE or SPEED_BUMP
+    val intensity: Float,          // G-force magnitude (m/s²)
+    val severity: Severity,        // LOW, MEDIUM, or HIGH
+    val timestamp: Long,           // Unix epoch in milliseconds
+    val createdByEmail: String     // Firebase Auth email of the reporting user
 )
 ```
 
@@ -180,8 +213,13 @@ data class PotholeData(
 enum class RoadFeature { POTHOLE, SPEED_BUMP, UNKNOWN }
 ```
 
+### Severity (Enum)
+```kotlin
+enum class Severity { LOW, MEDIUM, HIGH }
+```
+
 ### RoadSegment
-Used internally by the scoring engine and the map overlay.
+Used internally by the scoring engine and AdaptiveRoadOverlay.
 
 ```kotlin
 data class RoadSegment(
@@ -197,125 +235,127 @@ data class RoadSegment(
 
 ## 6. Detection Pipeline
 
-Detection follows a strict **two-stage verification pipeline** to eliminate false positives from road noise, car vibrations, and camera shake.
+Detection uses a **sensor-only pipeline** for on-device road event classification.
 
-### Stage 1 — Visual Detection (PotholeAnalyzer)
-
-```
-Camera Frame -> ML Kit (TFLite) -> Label Filtering -> Burst Capture
-```
-
-- CameraX feeds frames to PotholeAnalyzer via `ImageAnalysis.Analyzer`.
-- ML Kit Object Detection runs the custom `pothole_model.tflite` locally on-device (no internet required).
-- Labels are filtered against a class list from `pothole_labels.txt`. Only results containing "pothole" (but not "no pothole") with confidence > 45% are accepted.
-- On a positive detection, a **3-frame burst capture** is triggered.
-- The ImageAnalyzer utility selects the sharpest frame from the burst using a **Laplacian variance** score.
-
-### Stage 2 — Physical Verification (BumpDetector)
+### Stage 1 — Signal Acquisition (BumpDetector)
 
 ```
-Accelerometer Z-axis -> Delta Calculation -> State Machine -> Signature Match
+Accelerometer Z-axis (100Hz) → Low-pass Filter → 256-sample Window (50% overlap)
 ```
 
-BumpDetector uses a **state machine** to classify physical signatures:
+- `BumpDetector` registers a `SensorEventListener` for `TYPE_ACCELEROMETER`.
+- Raw Z-axis data is collected into a rolling window of 256 samples.
+- A **state machine** detects initial threshold crossings (configurable via `pref_sensor_threshold`).
 
-| Pattern | Classification |
-|---------|----------------|
-| Sharp drop (deltaZ < -threshold) followed by sharp rise within 600ms | POTHOLE |
-| Sharp rise followed by sharp drop within 600ms | SPEED BUMP |
-| Single spike without a matching return within 600ms | Timeout (Ignored) |
+### Stage 2 — Spectral Feature Extraction & ONNX Inference
 
-The sensitivity threshold (default: 3.8 m/s2) is user-configurable in Settings.
+```
+Windowed Signal → FFT (JTransforms) → 8 Features → ONNX Runtime → Classification
+```
 
-### Stage 3 — Cross-Correlation (DetectionManager)
+The `DetectionManager` (via ONNX Runtime) classifies each window using 8 features:
 
-DetectionManager is the mediator. When a sensor event fires:
-1. It checks if a camera detection occurred **within the last 1500ms**.
-2. If yes, the type is confirmed as POTHOLE (visual + physical match).
-3. If no, SPEED_BUMP events still pass through (they don't require visual confirmation).
-4. A **600ms lockout** prevents rebound spikes from triggering duplicate events.
+| Feature | Description |
+|---------|-------------|
+| Peak Frequency | Dominant FFT bin (Hz) |
+| Spectral Energy | Total power across spectrum |
+| Energy Distribution | Ratio across low / mid / high bands |
+| Spectral Variance | Spread of energy across frequency bins |
+| Peak Amplitude | Max instantaneous acceleration value |
+| RMS | Effective signal magnitude |
+| Kurtosis | Statistical sharpness; high for impulse events |
+| Zero Crossing Rate | Differentiates smooth vs abrupt waveforms |
 
-On verification, the callback fires with `(RoadFeature, intensity: Float, List<Bitmap>)`.
+**Output classes:** `0` = Normal Road, `1` = Speed Breaker, `2` = Pothole
 
-### Final Phase — Persistence & Map Update
-1. `PotholeRepository.savePothole()` JSON-serializes and persists the record.
-2. `addHeatmapPoint()` creates a map marker.
-3. `adaptiveOverlay.refresh()` recomputes the road quality grid scores.
-4. The dashboard counters are updated.
+### Stage 3 — Speed-Buffered Verification (DetectionManager)
+
+`DetectionManager` prevents false positives from slow-speed events (e.g. speed bumps rolled over slowly):
+
+1. If current speed ≥ 8 km/h → event fires **immediately**
+2. If current speed < 8 km/h → event is **buffered** in a pending list
+3. If speed recovers to ≥ 12 km/h within 15 seconds → buffered events are committed
+4. If no recovery within 15 seconds → buffered events are **discarded**
+5. A **1000ms lockout** after each event prevents rebound duplicate detections
+
+### Stage 4 — Persistence & Map Update
+
+1. `PotholeRepository.savePothole()` JSON-serializes and writes to SharedPreferences
+2. `PotholeRepository` emits an update via `StateFlow` — all subscribed screens refresh
+3. `addHeatmapPoint()` places a colored pin marker on the osmdroid map
+4. `adaptiveOverlay.refresh()` recomputes the road quality grid scores
+5. Dashboard counters update; `SafetyAlertManager` checks proximity to new hazard
 
 ---
 
 ## 7. Map Visualization System
 
 ### 7.1 AdaptiveRoadOverlay
-A custom osmdroid `Overlay` that renders two distinct visualizations based on zoom level:
+A custom osmdroid `Overlay` rendering two distinct visualizations based on zoom level:
 
 **Zoom Level < 15 — Segment Grade View**
-- Detections are bucketed into a ~100m x 100m grid (~0.0009 degrees per cell).
-- Each cell is scored and graded A-F by RoadQualityScorer.
-- The grid is drawn as translucent colored rectangles with a letter label.
-- A MapListener shows/hides the floating legend widget alongside this view.
+- Detections bucketed into ~100m x 100m grid (~0.0009° per cell)
+- Each cell scored and graded A–F by `RoadQualityScorer`
+- Grid drawn as translucent colored rectangles with grade letter label
+- A floating legend widget shows/hides alongside this view
 
-**Zoom Level >= 15 — Heatmap Blob View**
-- Each PotholeData is rendered as a radial gradient circle (blob).
-- Red blobs = Potholes, Teal blobs = Speed Bumps.
-- Blob radius scales with the `intensity` field (20px to 55px).
-- Glow opacity scales with the global overlayAlpha for crossfade animations.
+**Zoom Level ≥ 15 — Heatmap Blob View**
+- Each `PotholeData` rendered as a radial gradient circle
+- Gold blobs = Potholes, Teal blobs = Speed Bumps
+- Blob radius scales with `intensity`; glow opacity animates on zoom transition
 
-### 7.2 Road Quality Grading Engine (RoadQualityScorer)
+### 7.2 HeatmapOverlay
+Used in `OverviewActivity`. Groups detections into clusters and renders a heatmap.
+Critical clusters (grade D or F) receive interactive `Marker` overlays with reverse-geocoded addresses.
+
+### 7.3 Road Quality Grading Engine (RoadQualityScorer)
 | Score Range | Grade | Color | Label |
 |---|---|---|---|
-| 80 - 100 | A | Green (#2ECC71) | Excellent |
-| 60 - 79 | B | Light Green (#82E0AA) | Good |
-| 40 - 59 | C | Amber (#F4D03F) | Fair |
-| 20 - 39 | D | Orange (#E67E22) | Poor |
-| 0 - 19 | F | Red (#E74C3C) | Critical |
+| 80–100 | A | Green (#2ECC71) | Excellent |
+| 60–79 | B | Light Green (#82E0AA) | Good |
+| 40–59 | C | Amber (#F4D03F) | Fair |
+| 20–39 | D | Orange (#E67E22) | Poor |
+| 0–19 | F | Red (#E74C3C) | Critical |
 
 **Scoring Penalty per Detection:**
-| Intensity (G-force) | Penalty |
+| Intensity (m/s²) | Penalty |
 |---|---|
-| >= 2.5 | -35 points (Critical) |
-| >= 1.5 | -20 points (Severe) |
-| >= 0.8 | -10 points (Moderate) |
-| < 0.8 | -4 points (Minor) |
-
-### 7.3 Zoom Transition Animation
-A MapListener monitors ZoomEvent. On a tier change, a ValueAnimator animates the overlay's alpha from 0 to 255 over 400ms, creating a smooth crossfade between the two visualization modes.
+| ≥ 2.5 | −35 points (Critical) |
+| ≥ 1.5 | −20 points (Severe) |
+| ≥ 0.8 | −10 points (Moderate) |
+| < 0.8 | −4 points (Minor) |
 
 ### 7.4 Route Polylines
-Multi-candidate routes are drawn as Polyline overlays:
-- **Active Route** — Action Blue (#3B82F6), 18dp stroke width, fully opaque.
-- **Alternate Routes** — Slate Gray (#94A3B8), 14dp stroke width, 200/255 alpha.
-- On tap, the selected polyline is promoted to the top of the overlay stack and re-styled as the active route.
+- **Active Route** — Cyan (#00E0FF), 22dp stroke, Cap.ROUND
+- Routes drawn on MainActivity map during navigation mode
 
 ---
 
 ## 8. Navigation & Routing
 
 ### 8.1 Geocoding — Photon API
-- Used for fuzzy place search in the destination search bar.
-- Requests are debounced by 500ms using a Kotlin Job to avoid API spam on keystroke.
-- All searches are constrained to a **bounding box covering India** (68.1, 6.7, 97.4, 35.5).
-- Results are displayed in a dropdown adapter and selected to trigger routing.
+- Fuzzy place search in the destination search bar
+- Requests debounced by 500ms (Kotlin Job cancel/relaunch)
+- Searches constrained to India bounding box (68.1, 6.7, 97.4, 35.5)
+- Results displayed in dropdown adapter
 
 ### 8.2 Smart Routing — OpenRouteService API
-- Uses the ORS v2 Directions POST endpoint (`/v2/directions/driving-car/geojson`).
-- Requests include the `alternative_routes` parameter to fetch **up to 3 candidate paths**.
+- Uses ORS v2 Directions POST endpoint (`/v2/directions/driving-car/geojson`)
+- Fetches up to 3 alternative route candidates
 
 **Hazard Avoidance Logic:**
-1. On route request, all PotholeData records with `intensity > 0.8` are considered significant hazards.
-2. Each hazard location is enclosed in a **20-meter polygon** using BoundingBoxUtils.
-3. These polygons are sent as a GeoJSON `MultiPolygon` in the `options.avoid_polygons` field.
-4. ORS calculates paths that steer clear of those defined zones.
+1. All `PotholeData` records with `intensity > 0.8` are considered significant
+2. Each hazard is enclosed in a 20-meter polygon via `BoundingBoxUtils`
+3. Polygons sent as GeoJSON `MultiPolygon` in `options.avoid_polygons`
+4. ORS calculates paths avoiding those zones
 
 **Map Interaction:**
-- **Single-Tap** on map: Sets destination + triggers routing.
-- **Long-Press** on map: Opens the RoadWise Simulator dialog.
+- **Single-Tap** on map: Sets destination → triggers routing → opens `RouteAnalysisActivity`
+- **Long-Press** on map: Opens Simulator dialog
 
 ### 8.3 Road Quality Analytics (Route Level)
-After a route is fetched, RoadWise calculates a density metric:
 ```
-density = total_potholes / route_length_km
+density = total_hazards / route_length_km
 ```
 | Density | Label |
 |---|---|
@@ -323,12 +363,14 @@ density = total_potholes / route_length_km
 | < 1.5 | GREAT |
 | < 3.0 | GOOD |
 | < 5.0 | FAIR |
-| >= 5.0 | HAZARDOUS |
-
-This label updates on the dashboard in real-time whenever a new route or alternate route is selected.
+| ≥ 5.0 | HAZARDOUS |
 
 ### 8.4 Simulation Tool
-Accessible via **long-press** on the map. Displays a dialog to place a virtual POTHOLE (intensity 2.6) or SPEED_BUMP (intensity 1.2) at the tapped coordinate. The hazard is saved to the repository, appears in the heatmap, and is immediately factored into rerouting calculations.
+Accessible via **long-press** on the map. Opens a two-step dialog:
+1. Select hazard type: **Pothole** or **Speed Bump**
+2. Select severity: **Minor** (0.8g) / **Moderate** (1.5g) / **Severe** (2.5g) / **Critical** (3.5g)
+
+The hazard is saved to the repository, appears immediately on the heatmap, and is factored into rerouting.
 
 ---
 
@@ -337,60 +379,71 @@ Accessible via **long-press** on the map. Displays a dialog to place a virtual P
 ### PotholeRepository
 A singleton `object` managing all I/O operations.
 
-- **Storage Medium**: SharedPreferences with key `pothole_prefs` / `potholes`.
-- **Serialization**: Gson with custom JsonSerializer/JsonDeserializer for GeoPoint.
-- **In-Memory Cache**: A `cached` field reduces repeated deserialization calls.
-- **Startup Hydration**: On `MainActivity.onCreate()`, all saved detections are loaded to re-populate the heatmap markers and dashboard counter.
+- **Local Storage**: SharedPreferences, key `pothole_prefs` / `potholes`
+- **Serialization**: Gson with custom JsonSerializer/JsonDeserializer for `GeoPoint`
+- **In-Memory Cache**: `cached` field reduces repeated deserialization calls
+- **Cloud Storage**: Firebase Firestore, collection `road_events`
+- **Offline Support**: Detections saved locally when not logged in; synced to Firestore on next login via `syncAfterLogin()`
 
 **CRUD Operations:**
 | Method | Description |
 |---|---|
 | `getAllPotholes(ctx)` | Returns all records (from cache or disk) |
-| `savePothole(ctx, data)` | Appends one record and writes to disk |
+| `savePothole(ctx, data)` | Appends one record and writes to disk + Firestore |
 | `deletePothole(ctx, timestamp)` | Removes record by timestamp key |
-| `clearAll(ctx)` | Wipes all JSON data and associated image files |
+| `fetchFromCloud(ctx, cb)` | Pulls Firestore records and merges with local |
+| `resolveHotspot(ctx, list, cb)` | Batch-deletes a cluster from Firestore + local |
+| `clearAll(ctx)` | Wipes all JSON data from SharedPreferences |
+| `saveAllInternal(ctx, list)` | Overwrites entire local store |
 
 ---
 
 ## 10. Settings & Configuration
 
-All settings are stored in `roadwise_prefs` SharedPreferences.
+All settings stored in `roadwise_prefs` SharedPreferences.
 
 | Preference Key | Type | Default | Effect |
 |---|---|---|---|
-| `pref_theme` | String | `system` | Dark / Light / System theme |
-| `pref_battery_saver` | Boolean | false | Reduces GPS polling interval from 1s to 5s |
-| `pref_sensor_threshold` | Float | 3.8 | Minimum G-force delta to trigger BumpDetector |
-| `pref_audio_alerts` | Boolean | true | Enables/disables ToneGenerator beeps on detection |
+| `pref_battery_saver` | Boolean | false | Reduces GPS/sensing polling frequency |
+| `pref_sensor_threshold` | Float | 1.2 | Minimum G-force to trigger BumpDetector |
+| `pref_sensitivity_index` | Float | 1.0 | Slider index (0=Reactive, 1=Balanced, 2=Proactive) |
+| `pref_audio_alerts` | Float | 65.0 | Alert volume as a 0–100 percentage |
+| `pref_voice_alerts` | Boolean | true | Enables/disables proximity hazard alerts |
+| `pref_background_detection` | Boolean | true | Enables BumpDetector in background |
+| `pref_background_service` | Boolean | false | Controls DriveGuardService foreground service |
+| `pref_auto_start` | Boolean | false | Registers Activity Recognition transitions |
+| `pref_monitoring_enabled` | Boolean | true | Main toggle for active detection |
 
 **Data Management (from Settings):**
-- **Storage Usage**: Calculates and displays total size of all stored detection image files.
-- **Clear History**: Calls `PotholeRepository.clearAll()` to delete all JSON records and associated JPEG files.
+- **Storage Usage**: Displays count of detection records and total JSON storage size
+- **Clear History**: Calls `PotholeRepository.clearAll()` to delete all records
 
 ---
 
 ## 11. UI / Design System
 
-RoadWise uses a premium **"Glassmorphism Obsidian"** design theme built on custom attribute aliases.
+RoadWise uses a premium **"Glassmorphism Obsidian"** design theme.
 
 ### Theme Attributes
 | Attribute | Usage |
 |---|---|
-| `?attr/glassSurface` | Primary background for floating widgets (semi-transparent dark) |
-| `?attr/glassSurfaceDeep` | Deeper shade for the bottom navigation pill |
-| `?attr/glassBorder` | Border color for all glassmorphic cards |
-| `?attr/colorOnSurface` | Primary text color |
-| `?attr/textFaded` | Secondary/disabled text color |
+| `@color/obsidian_background` | Primary dark background |
+| `@color/glass_surface` | Semi-transparent dark for floating cards |
+| `@color/glass_border` | Border color for all glassmorphic cards |
+| `@color/emerald_neon` | Primary accent (teal/green) |
+| `@color/electric_gold` | Secondary accent (gold/yellow) |
+| `@color/cyber_blue` | Tertiary accent (blue) |
 
 ### Key UI Components
 | Component | Description |
 |---|---|
-| Bottom Navigation Pill | Floating MaterialCardView with Drive / History / Settings tabs |
-| Search Bar | Fuzzy autocomplete with Photon-powered place suggestions |
-| HUD Dashboard | Session pothole count, max speed, current speed, route quality |
-| Grade Legend | Floating widget showing A-F color reference; appears only at zoom < 15 |
-| Camera Card | Draggable mini camera preview with toggleable visibility |
-| Recenter Button | Floating button to snap the map back to the current GPS location |
+| Bottom Navigation Pill | Floating MaterialCardView with Drive / History / Overview / Settings / Account tabs |
+| Search Bar | AutoCompleteTextView with Photon-powered place suggestions |
+| HUD Dashboard | Session pothole count, max speed, current speed, monitoring status |
+| Grade Legend | Floating widget showing A–F color reference; visible at low zoom |
+| Recenter Button | Floating button to snap map back to current GPS location |
+| Monitoring Toggle | Switch with pulsing animation while active |
+| Navigation Panel | Slide-in panel shown during active navigation (hides HUD and search) |
 
 ---
 
@@ -398,12 +451,18 @@ RoadWise uses a premium **"Glassmorphism Obsidian"** design theme built on custo
 
 | Permission | Reason |
 |---|---|
-| CAMERA | Required for CameraX preview and ML inference |
-| ACCESS_FINE_LOCATION | High-accuracy GPS for hazard geo-tagging |
-| ACCESS_COARSE_LOCATION | Fallback coarse location |
-| INTERNET | Required for OSM tile download, Photon geocoding, ORS routing |
+| `ACCESS_FINE_LOCATION` | High-accuracy GPS for hazard geo-tagging and routing |
+| `ACCESS_COARSE_LOCATION` | Fallback coarse location |
+| `ACCESS_BACKGROUND_LOCATION` | GPS access while app is in background |
+| `ACTIVITY_RECOGNITION` | Detect when user is in a vehicle to auto-start sensing |
+| `INTERNET` | OSM tile download, Photon geocoding, ORS routing, Firebase sync |
+| `RECEIVE_BOOT_COMPLETED` | Re-register Activity Recognition on device reboot |
+| `FOREGROUND_SERVICE` | Run DriveGuardService as a foreground service |
+| `FOREGROUND_SERVICE_LOCATION` | Location access from foreground service |
+| `POST_NOTIFICATIONS` | Show detection and service notifications |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Request exclusion from Doze mode |
 
-> `WRITE_EXTERNAL_STORAGE` is intentionally omitted for Android 10+ compatibility. Images are saved to the app's scoped external storage directory instead.
+> `CAMERA` is **not required**. RoadWise uses accelerometer-only detection — no camera access is needed.
 
 ---
 
@@ -411,11 +470,12 @@ RoadWise uses a premium **"Glassmorphism Obsidian"** design theme built on custo
 
 | Property | Value |
 |---|---|
-| AGP Version | 8.1.0 |
-| Gradle Wrapper | 8.7 |
-| Java Compatibility | Java 21 |
+| Compile SDK | 36 |
+| Target SDK | 36 |
+| Min SDK | 24 |
+| Java Compatibility | Java 11 |
 | Build Variants | debug, release |
-| BuildConfig Fields | ORS_API_KEY (injected from local.properties) |
+| BuildConfig Fields | `ORS_API_KEY` (injected from `local.properties`) |
 
 ### Key Build Commands
 ```bash
@@ -433,10 +493,11 @@ RoadWise uses a premium **"Glassmorphism Obsidian"** design theme built on custo
 ```
 
 ### Getting Started (Developer Setup)
-1. Clone the repository.
-2. Add your OpenRouteService API key to `local.properties`:
+1. Clone the repository
+2. Add your Firebase config file: `app/google-services.json`
+3. Add your OpenRouteService API key to `local.properties`:
    ```properties
    ORS_API_KEY=your_api_key_here
    ```
-3. Connect a physical Android device (recommended for Camera and Accelerometer testing).
-4. Run `./gradlew installDebug` to build and install.
+4. Place the ONNX model at `app/src/main/assets/road_model.onnx` (contact the team)
+5. Run `./gradlew installDebug` to build and install on a connected Android device
