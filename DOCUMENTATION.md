@@ -43,64 +43,24 @@ This design makes RoadWise lightweight, privacy-preserving, and capable of worki
 
 ## 2. Technology Stack
 
-### Core Android
-| Component | Library / Version |
-|---|---|
-| Language | Kotlin |
-| Build System | Gradle (AGP 8.x) |
-| Architecture | Component-oriented with Activities + Coroutines |
-| Minimum SDK | API 24 (Android 7.0 Nougat) |
-| Target SDK | API 36 |
-| Compile SDK | 36 |
-| View Binding | Enabled |
-| BuildConfig Fields | Enabled |
-
-### AI & Signal Processing
-| Component | Library / Version |
-|---|---|
-| On-Device Inference | ONNX Runtime for Android 1.26.0 |
-| On-Device Model | `road_model.onnx` (placed in `app/src/main/assets/`) |
-| FFT Library | JTransforms 3.2 |
-
-### Maps & Location
-| Component | Library / Version |
-|---|---|
-| Map Rendering | osmdroid 6.1.20 |
-| Map Tiles | OpenStreetMap (MAPNIK) |
-| Location Provider | Fused Location Provider (play-services-location 21.3.0) |
-| Map Overlay | AdaptiveRoadOverlay + HeatmapOverlay (custom Overlay subclasses) |
-
-### Networking
-| Component | Library / Version |
-|---|---|
-| HTTP Client | Retrofit 3.0.0 + OkHttp 5.x |
-| JSON Serialization | Gson 2.14.0 + Retrofit Converter |
-| Geocoding API | Photon by Komoot (https://photon.komoot.io/) |
-| Routing API | OpenRouteService v2 (https://api.openrouteservice.org/) |
-
-### Cloud & Auth
-| Component | Library / Version |
-|---|---|
-| Database | Firebase Firestore (firebase-bom 34.x) |
-| Authentication | Firebase Auth (email/password) |
-
-### Persistence
-| Component | Library / Version |
-|---|---|
-| Local Storage | Android SharedPreferences |
-| Serialization | Gson (JSON) |
-
-### Concurrency
-| Component | Library / Version |
-|---|---|
-| Async Processing | Kotlin Coroutines (kotlinx-coroutines-android 1.11.0) |
-| Lifecycle Safety | lifecycle-runtime-ktx 2.10.0 + lifecycleScope |
-
-### UI
-| Component | Library / Version |
-|---|---|
-| Material Components | MDC Android 1.14.0 |
-| Preference Screen | androidx.preference:preference-ktx 1.2.1 |
+| Category | Component | Version |
+|---|---|---|
+| Language | Kotlin | — |
+| Build | Gradle AGP | 8.x |
+| SDK | Min 24 / Target 36 / Compile 36 | — |
+| ML Inference | ONNX Runtime for Android | 1.26.0 |
+| Signal Processing | JTransforms (FFT) | 3.2 |
+| Maps | osmdroid | 6.1.20 |
+| Location | Fused Location Provider (play-services-location) | 21.3.0 |
+| Routing API | OpenRouteService v2 | — |
+| Geocoding | Photon by Komoot | — |
+| Networking | Retrofit + OkHttp | 3.0.0 / 5.x |
+| JSON | Gson + Retrofit Converter | 2.14.0 |
+| Cloud DB | Firebase Firestore | BOM 34.x |
+| Auth | Firebase Auth | BOM 34.x |
+| Local Storage | SharedPreferences + Gson | — |
+| Async | Kotlin Coroutines + lifecycleScope | 1.11.0 |
+| UI | Material Components 3 | 1.14.0 |
 
 ---
 
@@ -422,28 +382,23 @@ All settings stored in `roadwise_prefs` SharedPreferences.
 
 ## 11. UI / Design System
 
-RoadWise uses a premium **"Glassmorphism Obsidian"** design theme.
+Dark theme with glassmorphism-style cards. Custom color tokens defined in `res/values/colors.xml`:
 
-### Theme Attributes
-| Attribute | Usage |
-|---|---|
-| `@color/obsidian_background` | Primary dark background |
-| `@color/glass_surface` | Semi-transparent dark for floating cards |
-| `@color/glass_border` | Border color for all glassmorphic cards |
-| `@color/emerald_neon` | Primary accent (teal/green) |
-| `@color/electric_gold` | Secondary accent (gold/yellow) |
-| `@color/cyber_blue` | Tertiary accent (blue) |
+- `obsidian_background` — primary background
+- `glass_surface` — semi-transparent dark for floating cards
+- `glass_border` — card borders
+- `emerald_neon` — primary accent (teal)
+- `electric_gold` — secondary accent
+- `cyber_blue` — tertiary accent
 
 ### Key UI Components
-| Component | Description |
-|---|---|
-| Bottom Navigation Pill | Floating MaterialCardView with Drive / History / Overview / Settings / Account tabs |
-| Search Bar | AutoCompleteTextView with Photon-powered place suggestions |
-| HUD Dashboard | Session pothole count, max speed, current speed, monitoring status |
-| Grade Legend | Floating widget showing A–F color reference; visible at low zoom |
-| Recenter Button | Floating button to snap map back to current GPS location |
-| Monitoring Toggle | Switch with pulsing animation while active |
-| Navigation Panel | Slide-in panel shown during active navigation (hides HUD and search) |
+
+- **Bottom Navigation Pill** — floating `MaterialCardView` with Drive / History / Overview / Settings / Account tabs; Overview tab hidden for non-admin users
+- **Search Bar** — `AutoCompleteTextView` with 500ms debounce, Photon geocoding
+- **HUD Dashboard** — pothole count, current speed, max speed, monitoring status
+- **Monitoring Toggle** — switch with pulsing alpha animation while sensing is active
+- **AdaptiveRoadOverlay Legend** — shows A–F grade colors; only visible at zoom < 15
+- **Navigation Panel** — slides in on route start, hides HUD and search bar
 
 ---
 
