@@ -20,6 +20,8 @@ import kotlin.math.abs
 
 class PotholeAdapter(
     private var potholes: List<PotholeData>,
+    private val currentUserEmail: String,
+    private val isAdmin: Boolean,
     private val onItemClick: (PotholeData) -> Unit,
     private val onDeleteClick: (PotholeData) -> Unit
 ) : RecyclerView.Adapter<PotholeAdapter.ViewHolder>() {
@@ -62,8 +64,8 @@ class PotholeAdapter(
         holder.pbIntensity.progressTintList = ContextCompat.getColorStateList(ctx, typeColor)
 
         // Format coordinates
-        val lat = String.format("%.4f", abs(pothole.location.latitude))
-        val lon = String.format("%.4f", abs(pothole.location.longitude))
+        val lat = String.format(java.util.Locale.US, "%.4f", abs(pothole.location.latitude))
+        val lon = String.format(java.util.Locale.US, "%.4f", abs(pothole.location.longitude))
         val latDir = if (pothole.location.latitude >= 0) "N" else "S"
         val lonDir = if (pothole.location.longitude >= 0) "E" else "W"
         holder.tvLocation.text = "$lat° $latDir, $lon° $lonDir"
@@ -96,7 +98,11 @@ class PotholeAdapter(
         }
 
         holder.itemView.setOnClickListener { onItemClick(pothole) }
-        holder.btnDelete.setOnClickListener { onDeleteClick(pothole) }
+
+        // Only allow deletion if user is the owner OR is an admin
+        val canDelete = isAdmin || pothole.createdByEmail == currentUserEmail
+        holder.btnDelete.visibility = if (canDelete) View.VISIBLE else View.GONE
+        holder.btnDelete.setOnClickListener { if (canDelete) onDeleteClick(pothole) }
     }
 
     private fun showTypeFallback(holder: ViewHolder, typeColorRes: Int) {

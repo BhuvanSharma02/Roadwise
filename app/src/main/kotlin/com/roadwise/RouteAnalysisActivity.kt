@@ -6,6 +6,8 @@ import android.graphics.Paint
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import com.roadwise.databinding.ActivityRouteAnalysisBinding
 import com.roadwise.models.PotholeData
@@ -28,6 +30,7 @@ class RouteAnalysisActivity : AppCompatActivity() {
     private var allRoutes: List<RouteResult> = emptyList()
     private val routeOverlays = mutableListOf<Polyline>()
     private val hazardMarkers = mutableListOf<Marker>()
+    private var selectedRouteIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +39,11 @@ class RouteAnalysisActivity : AppCompatActivity() {
         
         binding = ActivityRouteAnalysisBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
 
         map = binding.previewMap
         map.setTileSource(TileSourceFactory.MAPNIK)
@@ -51,10 +59,8 @@ class RouteAnalysisActivity : AppCompatActivity() {
 
         binding.btnAnalysisBack.setOnClickListener { finish() }
         binding.btnStartDrive.setOnClickListener {
-            val selectedIdx = routeOverlays.indexOfFirst { it.outlinePaint.alpha == 255 }
-            val index = if (selectedIdx != -1) selectedIdx else 0
             val intent = Intent().apply {
-                putExtra("SELECTED_ROUTE", allRoutes[index])
+                putExtra("SELECTED_ROUTE", allRoutes[selectedRouteIndex])
             }
             setResult(android.app.Activity.RESULT_OK, intent)
             finish()
@@ -62,6 +68,7 @@ class RouteAnalysisActivity : AppCompatActivity() {
     }
 
     private fun setupRoutes(selectedIndex: Int) {
+        selectedRouteIndex = selectedIndex
         routeOverlays.forEach { map.overlays.remove(it) }
         routeOverlays.clear()
 
@@ -126,8 +133,15 @@ class RouteAnalysisActivity : AppCompatActivity() {
         val distKm = route.distanceMeters / 1000.0
         binding.tvAnalysisDistance.text = if (isDirect) "Direct Path • ${String.format("%.1f km", distKm)}" else String.format("%.1f km", distKm)
         
-        val minutes = (distKm / 30.0 * 60.0).toInt().coerceAtLeast(1)
-        binding.tvAnalysisTime.text = "$minutes min"
+        val totalMinutes = (distKm / 30.0 * 60.0).toInt().coerceAtLeast(1)
+        binding.tvAnalysisTime.text = when {
+            totalMinutes >= 60 -> {
+                val hrs = totalMinutes / 60
+                val mins = totalMinutes % 60
+                if (mins == 0) "$hrs hr" else "$hrs hr $mins min"
+            }
+            else -> "$totalMinutes min"
+        }
         
         binding.tvAnalysisPotholes.text = stats.first.toString()
         binding.tvAnalysisBumps.text = stats.second.toString()

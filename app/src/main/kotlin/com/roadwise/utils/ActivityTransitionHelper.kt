@@ -14,6 +14,8 @@ object ActivityTransitionHelper {
 
     fun requestTransitions(context: Context) {
         val transitions = mutableListOf<ActivityTransition>()
+        
+        // 🚗 Driving detection
         transitions.add(
             ActivityTransition.Builder()
                 .setActivityType(DetectedActivity.IN_VEHICLE)
@@ -23,6 +25,14 @@ object ActivityTransitionHelper {
         transitions.add(
             ActivityTransition.Builder()
                 .setActivityType(DetectedActivity.IN_VEHICLE)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build()
+        )
+
+        // 🚶 Still/Walking exit (to trigger checks)
+        transitions.add(
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.STILL)
                 .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
                 .build()
         )
@@ -40,13 +50,23 @@ object ActivityTransitionHelper {
         )
 
         try {
-            ActivityRecognition.getClient(context)
-                .requestActivityTransitionUpdates(request, pendingIntent)
+            val client = ActivityRecognition.getClient(context)
+            
+            // 1. Request Transition Updates (Event-based)
+            client.requestActivityTransitionUpdates(request, pendingIntent)
                 .addOnSuccessListener {
                     Log.d("TransitionHelper", "Successfully registered activity transitions")
                 }
                 .addOnFailureListener { e ->
                     Log.e("TransitionHelper", "Failed to register activity transitions", e)
+                }
+            
+            // 2. Supplemental Activity Updates (Periodic fallback)
+            // Request updates every 2 minutes when "auto-start" is on.
+            // This ensures we don't miss transitions due to system deep-sleep.
+            client.requestActivityUpdates(120000L, pendingIntent)
+                .addOnSuccessListener {
+                    Log.d("TransitionHelper", "Successfully registered periodic activity updates")
                 }
         } catch (e: SecurityException) {
             Log.e("TransitionHelper", "Permission missing for Activity Recognition", e)
@@ -60,6 +80,8 @@ object ActivityTransitionHelper {
         val pendingIntent = PendingIntent.getBroadcast(
             context, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        ActivityRecognition.getClient(context).removeActivityTransitionUpdates(pendingIntent)
+        val client = ActivityRecognition.getClient(context)
+        client.removeActivityTransitionUpdates(pendingIntent)
+        client.removeActivityUpdates(pendingIntent)
     }
 }

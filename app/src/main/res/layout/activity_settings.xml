@@ -68,101 +68,6 @@
             android:paddingBottom="24dp">
 
             <!-- ══════════════════════════════════════ -->
-            <!-- SECTION: APPEARANCE                    -->
-            <!-- ══════════════════════════════════════ -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="APPEARANCE"
-                android:textColor="@color/emerald_neon"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.12"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="10dp"
-                android:layout_marginStart="4dp" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="2dp"
-                app:strokeColor="?attr/glassBorder"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <!-- Theme Mode -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="App Theme"
-                                android:textColor="?attr/colorOnSurface"
-                                android:textStyle="bold"
-                                android:textSize="15sp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Choose light, dark, or follow system"
-                                android:textColor="?attr/textFaded"
-                                android:textSize="12sp"
-                                android:layout_marginTop="2dp" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/themeChipGroup"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        app:singleSelection="true"
-                        app:selectionRequired="true">
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipThemeLight"
-                            style="@style/Widget.MaterialComponents.Chip.Choice"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="☀ Light"
-                            android:textSize="13sp" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipThemeDark"
-                            style="@style/Widget.MaterialComponents.Chip.Choice"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🌙 Dark"
-                            android:textSize="13sp" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipThemeAuto"
-                            style="@style/Widget.MaterialComponents.Chip.Choice"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="⚙ System"
-                            android:textSize="13sp" />
-                    </com.google.android.material.chip.ChipGroup>
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ══════════════════════════════════════ -->
             <!-- SECTION: DETECTION ENGINE              -->
             <!-- ══════════════════════════════════════ -->
             <TextView
@@ -173,7 +78,7 @@
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginBottom="10dp"
                 android:layout_marginStart="4dp" />
 
@@ -834,7 +739,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="osmdroid, Retrofit, ML Kit, CameraX"
+                                android:text="@string/os_libraries"
                                 android:textColor="?attr/textFaded"
                                 android:textSize="12sp"
                                 android:layout_marginTop="2dp" />
@@ -908,6 +813,7 @@
                     android:src="@drawable/ic_drive"
                     app:tint="?attr/textFaded" />
                 <TextView
+                    android:id="@+id/navDriveLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -930,10 +836,37 @@
                     android:src="@drawable/ic_alerts"
                     app:tint="?attr/textFaded" />
                 <TextView
+                    android:id="@+id/navAlertsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="History"
+                    android:textSize="10sp"
+                    android:textColor="?attr/textFaded" />
+            </LinearLayout>
+
+            <!-- Overview Tab (Admin Only) -->
+            <LinearLayout
+                android:id="@+id/navOverviewContainer"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginStart="4dp"
+                android:visibility="gone">
+                <ImageButton
+                    android:id="@+id/navOverview"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_analytics"
+                    app:tint="?attr/textFaded" />
+                <TextView
+                    android:id="@+id/navOverviewLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Overview"
                     android:textSize="10sp"
                     android:textColor="?attr/textFaded" />
             </LinearLayout>

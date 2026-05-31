@@ -1,25 +1,49 @@
 # RoadWise Git Ignore
-GEMINI.md
 
-# Gradle
+# Antigravity / Gemini AI memory files
+GEMINI.md
+ROADWISE_MEMORY.md
+
+# Gradle build outputs
 .gradle/
 build/
+app/build/
 
-# Android Studio
+# Android Studio IDE files
 .idea/
 *.iml
-local.properties
 .DS_Store
 captures/
 .externalNativeBuild
 .cxx
+
+# Sensitive config files (add your own copies locally)
 google-services.json
-<<<<<<< HEAD
-=======
 app/google-services.json
->>>>>>> contributor-fork/main
+local.properties
+
+# Documentation files excluded from repo (binary/redundant)
 DESIGN.md
 build_log.txt
 icon_preview.html
 RoadWise_Internals.docx
 roadwise_internals.md
+DOCUMENTATION.docx
+
+# Temp / scratch files
+temp_files.txt
+*.txt
+
+# Raw data / sample files
+*.json
+
+# Binary model files (download separately or use Git LFS)
+*.onnx
+*.tflite
+
+# Design mockup files
+stitch_designs/
+
+# Screenshots / image artifacts at root
+*.png
+*.jpg

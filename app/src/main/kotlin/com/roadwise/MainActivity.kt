@@ -44,6 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collect
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Polyline
@@ -57,6 +58,9 @@ import android.animation.ValueAnimator
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
+
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -96,16 +100,24 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            // Clear local cache first to ensure a clean sync for the new user
+            PotholeRepository.clearCache()
+
             updateNavForRole()
             val name = SessionManager.getUserName(this)
+            val email = SessionManager.getUserEmail(this)
             Toast.makeText(this, "Welcome, $name!", Toast.LENGTH_SHORT).show()
             
             // Trigger sync on login to upload local offline records
-            PotholeRepository.fetchFromCloud(this) { combinedList ->
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed && ::map.isInitialized) {
-                        refreshMarkers()
-                    }
+            syncAfterLogin()
+        }
+    }
+
+    private fun syncAfterLogin() {
+        PotholeRepository.fetchFromCloud(this) { combinedList ->
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed && ::map.isInitialized) {
+                    refreshMarkers()
                 }
             }
         }
@@ -121,6 +133,12 @@ class MainActivity : AppCompatActivity() {
 
             binding = ActivityMainBinding.inflate(layoutInflater)
             setContentView(binding.root)
+
+            // Hide the status bar for a clean, immersive HUD experience
+            WindowInsetsControllerCompat(window, window.decorView).apply {
+                hide(WindowInsetsCompat.Type.statusBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
 
             // ONE-TIME RESET
             val prefs = getSharedPreferences("roadwise_internal", Context.MODE_PRIVATE)
@@ -197,6 +215,11 @@ class MainActivity : AppCompatActivity() {
                     val speedMs = locationOverlay.myLocationProvider?.lastKnownLocation?.speed ?: 0f
                     val speedKmh = (speedMs * 3.6).toInt()
                     
+                    // Add covered distance in meters to session (runs every 1 sec, so speedMs is distance in meters)
+                    if (speedMs > 0 && SessionManager.isLoggedIn(this@MainActivity)) {
+                        SessionManager.addDistance(this@MainActivity, speedMs)
+                    }
+
                     // Update buffering logic for low-speed recovery
                     detectionManager.onSpeedUpdate(speedKmh)
 
@@ -284,21 +307,26 @@ class MainActivity : AppCompatActivity() {
 
             binding.navAlerts.setOnClickListener {
                 updateNavUI(it)
-                if (SessionManager.isAdmin(this)) {
-                    startActivity(Intent(this, OverviewActivity::class.java))
-                } else {
-                    startActivity(Intent(this, HistoryActivity::class.java))
-                }
+                startActivity(Intent(this, HistoryActivity::class.java))
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+            }
+            
+            binding.navOverview.setOnClickListener {
+                updateNavUI(it)
+                startActivity(Intent(this, OverviewActivity::class.java))
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
             }
 
             binding.navSettings.setOnClickListener {
                 updateNavUI(it)
                 startActivity(Intent(this, SettingsActivity::class.java))
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
             }
 
             binding.navAccount.setOnClickListener {
                 if (SessionManager.isLoggedIn(this)) {
-                    showLogoutDialog()
+                    startActivity(Intent(this, AccountActivity::class.java))
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
                 } else {
                     loginLauncher.launch(Intent(this, LoginActivity::class.java))
                 }
@@ -321,23 +349,50 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            binding.btnTheme.setOnClickListener {
-                val isNightMode = AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
-                AppCompatDelegate.setDefaultNightMode(
-                    if (isNightMode) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
-                )
-            }
-
             setupSearchBar()
 
             // Apply the correct nav state for the current session
             updateNavForRole()
 
+            // Dynamic Admin Re-sync (optional, but good for Option 1)
+            if (SessionManager.isLoggedIn(this)) {
+                SessionManager.checkAdminStatus(SessionManager.getUserEmail(this)) { currentStatus ->
+                    if (currentStatus != SessionManager.isAdmin(this)) {
+                        // Status changed in Firestore! Refresh session.
+                        SessionManager.login(this, SessionManager.getUserEmail(this), SessionManager.getUserName(this), currentStatus)
+                        updateNavForRole()
+                    }
+                }
+            }
+
             handleFocusIntent(intent)
+
+            // Ensure Activity Recognition is registered if enabled
+            if (sharedPrefs.getBoolean("pref_auto_start", false) && allPermissionsGranted()) {
+                com.roadwise.utils.ActivityTransitionHelper.requestTransitions(this)
+            }
+
+            // Restore DriveGuardService if it was enabled — startForegroundService on an
+            // already-running service is a safe no-op (just triggers onStartCommand again)
+            if (sharedPrefs.getBoolean("pref_background_service", false)) {
+                startForegroundService(Intent(this, com.roadwise.services.DriveGuardService::class.java))
+            }
+
+            observeDataChanges()
 
         } catch (e: Exception) {
             Log.e("RoadWise", "FATAL STARTUP ERROR", e)
             Toast.makeText(this, "Startup error: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun observeDataChanges() {
+        lifecycleScope.launch {
+            PotholeRepository.updates.collect {
+                runOnUiThread {
+                    refreshMarkers()
+                }
+            }
         }
     }
 
@@ -346,36 +401,26 @@ class MainActivity : AppCompatActivity() {
     private fun updateNavForRole() {
         val isAdmin    = SessionManager.isAdmin(this)
         val isLoggedIn = SessionManager.isLoggedIn(this)
-        val teal       = ContextCompat.getColor(this, R.color.emerald_neon)
-        val faded      = ContextCompat.getColor(this, R.color.text_med)
+
+        // Reset navAlerts to always be History
+        binding.navAlerts.setImageResource(R.drawable.ic_alerts)
+        binding.navAlertsLabel.text = "HISTORY"
 
         if (isAdmin) {
-            binding.navAlerts.setImageResource(R.drawable.ic_analytics)
-            binding.navAlertsLabel.text = "OVERVIEW"
+            binding.navOverviewContainer.visibility = View.VISIBLE
         } else {
-            binding.navAlerts.setImageResource(R.drawable.ic_alerts)
-            binding.navAlertsLabel.text = "HISTORY"
+            binding.navOverviewContainer.visibility = View.GONE
         }
 
-        // Account icon: teal with ✓ tint when logged in
-        binding.navAccount.setColorFilter(if (isLoggedIn) teal else faded)
-        binding.navAccountLabel.setTextColor(if (isLoggedIn) teal else faded)
-        binding.navAccountLabel.text = if (isLoggedIn) SessionManager.getUserName(this).uppercase().take(8) else "ACCOUNT"
-    }
-
-    private fun showLogoutDialog() {
-        val email = SessionManager.getUserEmail(this)
-        val role  = if (SessionManager.isAdmin(this)) "Admin" else "Standard User"
-        AlertDialog.Builder(this)
-            .setTitle("Signed In")
-            .setMessage("$email\nRole: $role\n\nSign out of RoadWise?")
-            .setPositiveButton("Sign Out") { _, _ ->
-                SessionManager.logout(this)
-                updateNavForRole()
-                Toast.makeText(this, "Signed out successfully.", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        // Reset account label correctly based on login state
+        binding.navAccountLabel.text = if (isLoggedIn) {
+            SessionManager.getUserName(this).uppercase().take(8)
+        } else {
+            "ACCOUNT"
+        }
+        
+        // Ensure the current activity's tab (Drive) is highlighted
+        updateNavUI(binding.navDrive)
     }
 
     // ── Nav UI helper ──────────────────────────────────────────────────────────
@@ -386,15 +431,22 @@ class MainActivity : AppCompatActivity() {
 
         binding.navDrive.setColorFilter(faded)
         binding.navAlerts.setColorFilter(faded)
+        binding.navOverview.setColorFilter(faded)
         binding.navSettings.setColorFilter(faded)
+        binding.navAccount.setColorFilter(faded)
+        
         binding.navDriveLabel.setTextColor(faded)
         binding.navAlertsLabel.setTextColor(faded)
+        binding.navOverviewLabel.setTextColor(faded)
         binding.navSettingsLabel.setTextColor(faded)
+        binding.navAccountLabel.setTextColor(faded)
 
         when (active.id) {
             R.id.navDrive    -> { binding.navDrive.setColorFilter(teal);    binding.navDriveLabel.setTextColor(teal) }
             R.id.navAlerts   -> { binding.navAlerts.setColorFilter(teal);   binding.navAlertsLabel.setTextColor(teal) }
+            R.id.navOverview -> { binding.navOverview.setColorFilter(teal); binding.navOverviewLabel.setTextColor(teal) }
             R.id.navSettings -> { binding.navSettings.setColorFilter(teal); binding.navSettingsLabel.setTextColor(teal) }
+            R.id.navAccount  -> { binding.navAccount.setColorFilter(teal);  binding.navAccountLabel.setTextColor(teal) }
         }
     }
 
@@ -737,6 +789,15 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         if (::map.isInitialized) map.onPause()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 10 && allPermissionsGranted()) {
+            if (sharedPrefs.getBoolean("pref_auto_start", false)) {
+                com.roadwise.utils.ActivityTransitionHelper.requestTransitions(this)
+            }
+        }
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {

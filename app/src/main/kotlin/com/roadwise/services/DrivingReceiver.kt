@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.google.android.gms.location.ActivityRecognitionResult
 import com.google.android.gms.location.ActivityTransition
 import com.google.android.gms.location.ActivityTransitionResult
 import com.google.android.gms.location.DetectedActivity
@@ -29,35 +30,46 @@ class DrivingReceiver : BroadcastReceiver() {
         Log.d("DrivingReceiver", "Received event: ${intent.action}")
         
         if (intent.action == "com.roadwise.ACTION_ACTIVITY_TRANSITION") {
+            val prefs = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("pref_auto_start", false)) return
+
+            // 1. Handle explicit Transition Events (High Precision)
             if (ActivityTransitionResult.hasResult(intent)) {
                 val result = ActivityTransitionResult.extractResult(intent)!!
                 for (event in result.transitionEvents) {
-                    val activityType = event.activityType
-                    val transitionType = event.transitionType
-
-                    Log.d("DrivingReceiver", "Activity: $activityType, Transition: $transitionType")
-
-                    val prefs = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
-                    val autoStartEnabled = prefs.getBoolean("pref_auto_start", false)
-
-                    if (!autoStartEnabled) {
-                        Log.d("DrivingReceiver", "Auto-start is disabled in settings. Ignoring.")
-                        return
-                    }
-
-                    if (activityType == DetectedActivity.IN_VEHICLE) {
-                        if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-                            Log.i("DrivingReceiver", "🚗 IN_VEHICLE ENTER detected. Sending prompt notification.")
-                            sendStartPromptNotification(context)
-                        } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
-                            Log.i("DrivingReceiver", "🚶 IN_VEHICLE EXIT detected. Stopping monitoring.")
-                            context.stopService(Intent(context, DriveGuardService::class.java))
-                        }
-                    }
+                    handleActivityEvent(context, event.activityType, event.transitionType)
                 }
-            } else {
-                Log.w("DrivingReceiver", "Received intent but no transition result found.")
+            } 
+            
+            // 2. Handle Periodic Activity Updates (Robust Fallback)
+            if (ActivityRecognitionResult.hasResult(intent)) {
+                val result = ActivityRecognitionResult.extractResult(intent)!!
+                val mostProbable = result.mostProbableActivity
+                Log.d("DrivingReceiver", "Periodic Update: ${mostProbable.type} Confidence: ${mostProbable.confidence}")
+                
+                if (mostProbable.type == DetectedActivity.IN_VEHICLE && mostProbable.confidence >= 75) {
+                    Log.i("DrivingReceiver", "🚗 IN_VEHICLE detected via periodic update. Prompting.")
+                    sendStartPromptNotification(context)
+                }
             }
+        }
+    }
+
+    private fun handleActivityEvent(context: Context, activityType: Int, transitionType: Int) {
+        Log.d("DrivingReceiver", "Activity: $activityType, Transition: $transitionType")
+
+        if (activityType == DetectedActivity.IN_VEHICLE) {
+            if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                Log.i("DrivingReceiver", "🚗 IN_VEHICLE ENTER detected. Sending prompt notification.")
+                sendStartPromptNotification(context)
+            } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
+                Log.i("DrivingReceiver", "🚶 IN_VEHICLE EXIT detected. Stopping monitoring.")
+                context.stopService(Intent(context, DriveGuardService::class.java))
+            }
+        } else if (activityType == DetectedActivity.STILL && transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
+            // If we stop being still, we might be starting to move. 
+            // We don't prompt yet, but we've successfully woken up the receiver.
+            Log.d("DrivingReceiver", "App woke up from STILL. Monitoring for driving.")
         }
     }
 

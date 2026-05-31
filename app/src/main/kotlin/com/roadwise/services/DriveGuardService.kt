@@ -72,14 +72,21 @@ class DriveGuardService : Service() {
         }
         
         startLocationUpdates()
-        bumpDetector.start()
+        // Only run active bump detection if the user has background detection enabled
+        if (sharedPrefs.getBoolean("pref_background_detection", true)) {
+            bumpDetector.start()
+        }
     }
 
     private var lastLocation: Location? = null
 
     private fun startLocationUpdates() {
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
-            .setMinUpdateIntervalMillis(500)
+        val batterySaver = sharedPrefs.getBoolean("pref_battery_saver", false)
+        val locationRequest = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            if (batterySaver) 2000L else 1000L
+        )
+            .setMinUpdateIntervalMillis(if (batterySaver) 1500L else 500L)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -94,8 +101,10 @@ class DriveGuardService : Service() {
                     // Update Notification
                     updateNotification(currentSpeedKmh)
                     
-                    // Check Alerts
-                    safetyAlertManager.checkHazards(GeoPoint(location), location.bearing, currentSpeedKmh)
+                    // Check Alerts — only if voice alerts are enabled in Settings
+                    if (sharedPrefs.getBoolean("pref_voice_alerts", true)) {
+                        safetyAlertManager.checkHazards(GeoPoint(location), location.bearing, currentSpeedKmh)
+                    }
                 }
             }
         }

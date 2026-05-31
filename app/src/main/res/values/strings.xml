@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">RoadWise</string>
     <string name="accessibility_service_description">Automatically starts RoadWise monitoring when Google Maps navigation is opened.</string>
+    <string name="back">Back</string>
+    <string name="account">Account</string>
+    <string name="profile_picture">Profile Picture</string>
+    <string name="logout">Logout</string>
+    <string name="version_format">v%1$s</string>
+    <string name="os_libraries">osmdroid, Retrofit, OkHttp, Firebase, ONNX Runtime, ML Kit, JTransforms, Coroutines, Jetpack</string>
 </resources>

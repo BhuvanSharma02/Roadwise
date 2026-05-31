@@ -254,34 +254,6 @@
             app:tint="@color/emerald_neon" />
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Theme Toggle Button -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/btnThemeContainer"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="8dp"
-        app:cardBackgroundColor="@color/glass_surface"
-        app:cardCornerRadius="999dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/glass_border"
-        app:strokeWidth="1dp"
-        app:layout_constraintBottom_toTopOf="@id/btnRecenterContainer"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/btnTheme"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:contentDescription="Toggle Theme"
-            android:src="@drawable/ic_theme_toggle"
-            app:backgroundTint="@android:color/transparent"
-            app:fabSize="mini"
-            app:elevation="0dp"
-            app:maxImageSize="20dp"
-            app:tint="@color/text_med" />
-    </com.google.android.material.card.MaterialCardView>
-
     <!-- Grade Legend (hidden by default) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/gradeLegend"
@@ -383,7 +355,7 @@
                     android:fontFamily="sans-serif-medium" />
             </LinearLayout>
 
-            <!-- History / Overview Tab -->
+            <!-- History Tab -->
             <LinearLayout
                 android:id="@+id/navAlertsContainer"
                 android:layout_width="72dp"
@@ -404,6 +376,34 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:text="HISTORY"
+                    android:textSize="8sp"
+                    android:letterSpacing="0.12"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/text_low" />
+            </LinearLayout>
+
+            <!-- Overview Tab (Admin Only) -->
+            <LinearLayout
+                android:id="@+id/navOverviewContainer"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="4dp"
+                android:visibility="gone">
+                <ImageButton
+                    android:id="@+id/navOverview"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_analytics"
+                    app:tint="@color/text_low" />
+                <TextView
+                    android:id="@+id/navOverviewLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="OVERVIEW"
                     android:textSize="8sp"
                     android:letterSpacing="0.12"
                     android:fontFamily="sans-serif-medium"

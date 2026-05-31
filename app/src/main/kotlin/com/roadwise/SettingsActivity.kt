@@ -9,6 +9,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.roadwise.databinding.ActivitySettingsBinding
 import com.roadwise.utils.PotholeRepository
 import com.roadwise.services.DriveGuardService
@@ -42,34 +44,13 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val prefs = getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
+        // Hide status bar for immersive experience
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
 
-        // ─────────────────────────────────────────────
-        // APPEARANCE — Theme
-        // ─────────────────────────────────────────────
-        val savedTheme = prefs.getString("pref_theme", "auto")
-        when (savedTheme) {
-            "light" -> binding.chipThemeLight.isChecked = true
-            "dark"  -> binding.chipThemeDark.isChecked = true
-            else    -> binding.chipThemeAuto.isChecked = true
-        }
-        binding.themeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
-            val mode = when {
-                checkedIds.contains(R.id.chipThemeLight) -> {
-                    prefs.edit().putString("pref_theme", "light").apply()
-                    AppCompatDelegate.MODE_NIGHT_NO
-                }
-                checkedIds.contains(R.id.chipThemeDark) -> {
-                    prefs.edit().putString("pref_theme", "dark").apply()
-                    AppCompatDelegate.MODE_NIGHT_YES
-                }
-                else -> {
-                    prefs.edit().putString("pref_theme", "auto").apply()
-                    AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                }
-            }
-            AppCompatDelegate.setDefaultNightMode(mode)
-        }
+        val prefs = getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
 
         // ─────────────────────────────────────────────
         // DETECTION ENGINE — Background + Sensitivity
@@ -121,10 +102,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.sliderSensitivity.addOnChangeListener { _, value, _ ->
             prefs.edit().putFloat("pref_sensitivity_index", value).apply()
             val threshold = when (value) {
-                0.0f -> 6.0f   // Reactive — only big jolts
-                1.0f -> 3.8f   // Balanced
-                2.0f -> 2.2f   // Proactive — catches smaller bumps
-                else -> 3.8f
+                0.0f -> 2.0f   // Reactive — only big jolts
+                1.0f -> 1.2f   // Balanced — original validated value
+                2.0f -> 0.7f   // Proactive — catches smaller bumps
+                else -> 1.2f
             }
             prefs.edit().putFloat("pref_sensor_threshold", threshold).apply()
             updateSensitivityLabel(value)
@@ -183,7 +164,7 @@ class SettingsActivity : AppCompatActivity() {
         // ─────────────────────────────────────────────
         // ABOUT
         // ─────────────────────────────────────────────
-        binding.tvVersion.text = BuildConfig.VERSION_NAME
+        binding.tvVersion.text = getString(R.string.version_format, BuildConfig.VERSION_NAME)
 
         binding.btnShareApp.setOnClickListener {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -201,6 +182,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateBatteryStatus()
+        refreshDataStats()
         // Refresh service toggle state
         binding.switchBackgroundService.isChecked = isServiceRunning(DriveGuardService::class.java)
     }
@@ -221,13 +203,13 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateSensitivityLabel(value: Float) {
-        val (threshold, label) = when (value) {
-            0.0f -> Pair(6.0f, "Reactive")
-            1.0f -> Pair(3.8f, "Balanced")
-            2.0f -> Pair(2.2f, "Proactive")
-            else -> Pair(3.8f, "Balanced")
+        val (threshold, label, hint) = when (value) {
+            0.0f -> Triple(2.0f, "Reactive",  "Only large impacts")
+            1.0f -> Triple(1.2f, "Balanced",  "Recommended")
+            2.0f -> Triple(0.7f, "Proactive", "Catches smaller bumps")
+            else -> Triple(1.2f, "Balanced",  "Recommended")
         }
-        binding.tvSensitivityLabel.text = "Threshold: ${threshold}g ($label)"
+        binding.tvSensitivityLabel.text = "$label — ${threshold} m/s² ($hint)"
     }
 
     private fun updateAudioLabel(value: Float) {
@@ -274,17 +256,23 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupNavigation() {
         binding.navDrive.setOnClickListener {
-            startActivity(Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-            })
+            // Simply finish this activity to return to MainActivity (which is singleTop)
+            finish()
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
         binding.navAlerts.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
+        binding.navOverview.setOnClickListener {
+            startActivity(Intent(this, OverviewActivity::class.java))
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
         binding.navSettings.setOnClickListener { /* already here */ }
         binding.navAccount.setOnClickListener {
             if (com.roadwise.utils.SessionManager.isLoggedIn(this)) {
-                showLogoutDialog()
+                startActivity(Intent(this, AccountActivity::class.java))
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
             } else {
                 loginLauncher.launch(Intent(this, LoginActivity::class.java))
             }
@@ -297,29 +285,35 @@ class SettingsActivity : AppCompatActivity() {
         val teal       = ContextCompat.getColor(this, R.color.emerald_neon)
         val faded      = ContextCompat.getColor(this, R.color.text_med)
 
+        // Reset navAlerts to always be History
+        binding.navAlerts.setImageResource(R.drawable.ic_alerts)
+        binding.navAlertsLabel.text = "HISTORY"
+
         if (isAdmin) {
-            binding.navAlerts.setImageResource(R.drawable.ic_analytics)
+            binding.navOverviewContainer.visibility = android.view.View.VISIBLE
         } else {
-            binding.navAlerts.setImageResource(R.drawable.ic_alerts)
+            binding.navOverviewContainer.visibility = android.view.View.GONE
         }
 
-        // Account icon: teal with ✓ tint when logged in
-        binding.navAccount.setColorFilter(if (isLoggedIn) teal else faded)
-        binding.navAccountLabel.setTextColor(if (isLoggedIn) teal else faded)
-        binding.navAccountLabel.text = if (isLoggedIn) com.roadwise.utils.SessionManager.getUserName(this).uppercase().take(8) else "ACCOUNT"
-    }
+        // Reset account label correctly based on login state
+        binding.navAccountLabel.text = if (isLoggedIn) {
+            com.roadwise.utils.SessionManager.getUserName(this).uppercase().take(8)
+        } else {
+            "ACCOUNT"
+        }
 
-    private fun showLogoutDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Logout")
-            .setMessage("Are you sure you want to log out of your RoadWise profile?")
-            .setPositiveButton("Logout") { _, _ ->
-                com.roadwise.utils.SessionManager.logout(this)
-                updateNavForRole()
-                android.widget.Toast.makeText(this, "Logged out successfully", android.widget.Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        // Highlight Settings tab as active, fade others
+        binding.navDrive.setColorFilter(faded)
+        binding.navAlerts.setColorFilter(faded)
+        binding.navOverview.setColorFilter(faded)
+        binding.navSettings.setColorFilter(teal) // Active
+        binding.navAccount.setColorFilter(faded)
+        
+        binding.navDriveLabel.setTextColor(faded)
+        binding.navAlertsLabel.setTextColor(faded)
+        binding.navOverviewLabel.setTextColor(faded)
+        binding.navSettingsLabel.setTextColor(teal) // Active
+        binding.navAccountLabel.setTextColor(faded)
     }
 
     override fun onDestroy() {

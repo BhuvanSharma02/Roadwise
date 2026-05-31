@@ -1,6 +1,7 @@
 package com.roadwise.utils
 
 import android.content.Context
+import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import com.roadwise.models.PotholeData
@@ -126,8 +127,14 @@ class SafetyAlertManager(private val context: Context) : TextToSpeech.OnInitList
     }
 
     private fun speak(message: String, utterId: String) {
-        Log.d("SafetyAlertManager", "Speaking: $message")
-        tts?.speak(message, TextToSpeech.QUEUE_ADD, null, utterId)
+        val prefs = context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
+        val volume = prefs.getFloat("pref_audio_alerts", 65f) / 100f
+        if (volume == 0f) return // Muted in Settings
+        val params = Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume)
+        }
+        Log.d("SafetyAlertManager", "Speaking: $message (vol: $volume)")
+        tts?.speak(message, TextToSpeech.QUEUE_ADD, params, utterId)
     }
 
     private fun normalizeDegree(degree: Float): Float {

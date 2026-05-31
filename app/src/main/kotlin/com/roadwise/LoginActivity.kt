@@ -7,6 +7,8 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.roadwise.databinding.ActivityLoginBinding
 import com.roadwise.utils.SessionManager
@@ -21,7 +23,15 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnBack.setOnClickListener { finish() }
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
+        binding.btnBack.setOnClickListener { 
+            finish()
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
 
         binding.etPassword.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -56,24 +66,34 @@ class LoginActivity : AppCompatActivity() {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
-                    // Fetch ID token to read custom claims (admin flag)
-                    auth.currentUser?.getIdToken(true)?.addOnCompleteListener { tokenTask ->
-                        setLoading(false)
-                        val isAdminClaim = tokenTask.result
-                            ?.claims?.get("admin") as? Boolean ?: false
+                    val firebaseUser = auth.currentUser
+                    val userEmail = firebaseUser?.email ?: email
 
-                        SessionManager.login(
-                            context     = this,
-                            email       = email,
-                            displayName = auth.currentUser?.displayName,
-                            isAdminClaim = isAdminClaim
-                        )
+                    // 1. Check Firestore for Admin Status
+                    SessionManager.checkAdminStatus(userEmail) { isFirestoreAdmin ->
+                        
+                        // 2. Also check Token Claims for secondary verification
+                        firebaseUser?.getIdToken(false)?.addOnCompleteListener { tokenTask ->
+                            setLoading(false)
+                            
+                            val isAdminClaim = tokenTask.result
+                                ?.claims?.get("admin") as? Boolean ?: false
+                            
+                            val finalAdminStatus = isFirestoreAdmin || isAdminClaim
 
-                        // Return result to MainActivity so it can update the nav immediately
-                        setResult(Activity.RESULT_OK, Intent().apply {
-                            putExtra("is_admin", SessionManager.isAdmin(this@LoginActivity))
-                        })
-                        finish()
+                            SessionManager.login(
+                                context = this,
+                                email = userEmail,
+                                displayName = firebaseUser.displayName,
+                                isAdmin = finalAdminStatus
+                            )
+
+                            // Return result to MainActivity
+                            setResult(Activity.RESULT_OK, Intent().apply {
+                                putExtra("is_admin", finalAdminStatus)
+                            })
+                            finish()
+                        }
                     }
                 } else {
                     setLoading(false)
@@ -104,11 +124,14 @@ class LoginActivity : AppCompatActivity() {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
+                    val userEmail = auth.currentUser?.email ?: email
+                    
+                    // New users are standard users by default
                     SessionManager.login(
-                        context     = this,
-                        email       = email,
+                        context = this,
+                        email = userEmail,
                         displayName = null,
-                        isAdminClaim = false
+                        isAdmin = false
                     )
                     setResult(Activity.RESULT_OK)
                     finish()

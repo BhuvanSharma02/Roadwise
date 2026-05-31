@@ -16,7 +16,8 @@
         android:id="@+id/topDashboardCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginHorizontal="16dp"
         app:cardBackgroundColor="?attr/glassSurfaceDeep"
         app:cardCornerRadius="24dp"
         app:cardElevation="12dp"
@@ -142,7 +143,8 @@
                 android:layout_height="wrap_content"
                 android:scrollbars="none"
                 android:paddingHorizontal="16dp"
-                android:paddingTop="12dp">
+                android:paddingTop="12dp"
+                android:paddingBottom="4dp">
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/chipGroupFilters"
@@ -159,6 +161,7 @@
                         android:layout_height="wrap_content"
                         android:checked="true"
                         android:text="Map View: All Elements"
+                        android:textColor="@color/chip_text_selector"
                         app:chipBackgroundColor="@color/chip_background_selector"
                         app:chipStrokeColor="?attr/glassBorder"
                         app:chipStrokeWidth="1dp" />
@@ -169,6 +172,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Critical Only (Grade D/F)"
+                        android:textColor="@color/chip_text_selector"
                         app:chipBackgroundColor="@color/chip_background_selector"
                         app:chipStrokeColor="?attr/glassBorder"
                         app:chipStrokeWidth="1dp" />
@@ -179,6 +183,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Moderate Watchlist"
+                        android:textColor="@color/chip_text_selector"
                         app:chipBackgroundColor="@color/chip_background_selector"
                         app:chipStrokeColor="?attr/glassBorder"
                         app:chipStrokeWidth="1dp" />
@@ -192,11 +197,10 @@
         android:id="@+id/legendCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:layout_marginBottom="80dp"
-        app:cardBackgroundColor="?attr/glassSurface"
+        android:layout_margin="12dp"
+        app:cardBackgroundColor="?attr/glassSurfaceDeep"
         app:cardCornerRadius="16dp"
-        app:cardElevation="8dp"
+        app:cardElevation="6dp"
         app:strokeColor="?attr/glassBorder"
         app:strokeWidth="1dp"
         app:layout_constraintBottom_toTopOf="@id/btnShowList"
@@ -211,7 +215,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="HEATMAP LEGEND"
+                android:text="ROAD HEALTH GRADES"
                 android:textSize="9sp"
                 android:textStyle="bold"
                 android:textColor="?attr/textFaded"
@@ -219,16 +223,16 @@
                 android:layout_marginBottom="8dp" />
 
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:layout_marginBottom="6dp">
-                <View android:layout_width="12dp" android:layout_height="12dp" android:background="@drawable/circle_indicator" android:backgroundTint="#2ECC71" android:layout_marginEnd="8dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Stable" android:textSize="12sp" android:textColor="?attr/colorOnSurface"/>
+                <View android:layout_width="10dp" android:layout_height="10dp" android:background="@drawable/circle_indicator" android:backgroundTint="#2ECC71" android:layout_marginEnd="8dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Grade A/B: Excellent / Good" android:textSize="11sp" android:textColor="?attr/colorOnSurface"/>
             </LinearLayout>
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:layout_marginBottom="6dp">
-                <View android:layout_width="12dp" android:layout_height="12dp" android:background="@drawable/circle_indicator" android:backgroundTint="#F4D03F" android:layout_marginEnd="8dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Erosion" android:textSize="12sp" android:textColor="?attr/colorOnSurface"/>
+                <View android:layout_width="10dp" android:layout_height="10dp" android:background="@drawable/circle_indicator" android:backgroundTint="#F4D03F" android:layout_marginEnd="8dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Grade C: Fair / Watchlist" android:textSize="11sp" android:textColor="?attr/colorOnSurface"/>
             </LinearLayout>
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical">
-                <View android:layout_width="12dp" android:layout_height="12dp" android:background="@drawable/circle_indicator" android:backgroundTint="#E74C3C" android:layout_marginEnd="8dp"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hazardous" android:textSize="12sp" android:textColor="?attr/colorOnSurface"/>
+                <View android:layout_width="10dp" android:layout_height="10dp" android:background="@drawable/circle_indicator" android:backgroundTint="#E74C3C" android:layout_marginEnd="8dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Grade D/F: Poor / Critical" android:textSize="11sp" android:textColor="?attr/colorOnSurface"/>
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

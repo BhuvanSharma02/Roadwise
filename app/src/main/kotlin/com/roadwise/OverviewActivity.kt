@@ -9,6 +9,8 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,6 +25,7 @@ import com.roadwise.sensors.RoadFeature
 import com.roadwise.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -57,13 +60,31 @@ class OverviewActivity : AppCompatActivity() {
         binding = ActivityOverviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
         setupUI()
         setupMap()
         loadData()
+        observeDataChanges()
+    }
+
+    private fun observeDataChanges() {
+        lifecycleScope.launch {
+            PotholeRepository.updates.collect {
+                allData = PotholeRepository.getAllPotholes(this@OverviewActivity)
+                renderData(allData)
+            }
+        }
     }
 
     private fun setupUI() {
-        binding.btnOverviewBack.setOnClickListener { finish() }
+        binding.btnOverviewBack.setOnClickListener { 
+            finish()
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
         
         binding.btnShowList.setOnClickListener { showHotspotSheet() }
         
@@ -344,6 +365,11 @@ class OverviewActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() { super.onResume(); map.onResume() }
+    override fun onResume() { 
+        super.onResume()
+        map.onResume()
+        allData = PotholeRepository.getAllPotholes(this)
+        renderData(allData)
+    }
     override fun onPause() { super.onPause(); map.onPause() }
 }

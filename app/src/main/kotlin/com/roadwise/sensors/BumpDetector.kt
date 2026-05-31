@@ -1,6 +1,7 @@
 package com.roadwise.sensors
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -20,25 +21,33 @@ class BumpDetector(
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
     private val gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
-    
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
+
     private val model = RoadModelInference(context)
     private val lastGravity = floatArrayOf(0f, 0f, 9.81f)
 
     // ML Model Parameters: 40 samples @ 20Hz = 2 seconds
     private val windowSize = 40
     private val stepSize = 20 // 50% overlap
-    
+
     private val xHistory = FloatArray(windowSize)
     private val yHistory = FloatArray(windowSize)
     private val zHistory = FloatArray(windowSize)
-    
+
     private var writeIndex = 0
     private var samplesCount = 0
 
     private val MIN_SPEED_KMH = 3 // Capture even if slowing down significantly
     private var lastEventTime = 0L
 
+    // Read the threshold set by the sensitivity slider in Settings.
+    // Default 1.2 m/s² = Balanced (the original validated value).
+    private var impactThreshold: Float = 1.2f
+
     fun start() {
+        // Re-read threshold every time monitoring starts so Settings changes take effect
+        impactThreshold = prefs.getFloat("pref_sensor_threshold", 1.2f)
         accelerometer?.let {
             // We request 50,000us (20Hz)
             sensorManager.registerListener(this, it, 50000)
@@ -108,11 +117,11 @@ class BumpDetector(
         // 1. Extract 12 Features
         val features = extract12Features()
         
-        // 2. Filter physical events first: ensure the peak crosses impact threshold 1.2 m/s^2
+        // 2. Filter physical events first: ensure the peak crosses the user-configured threshold
         val zMax = features[2]
         val zMin = features[3]
         val magnitude = max(zMax, -zMin)
-        if (magnitude < 1.2f) return
+        if (magnitude < impactThreshold) return
         
         // 3. Run ML Inference
         val (prediction, confidence) = model.predict(features)
@@ -173,7 +182,7 @@ class BumpDetector(
         for (v in zFiltered) {
             zRmsSum += v.pow(2)
             zEnergySum += v.pow(2)
-            if (abs(v) > 1.2f) impactCount++
+            if (abs(v) > impactThreshold) impactCount++
         }
         val zRms = sqrt(zRmsSum / windowSize)
         val impactRatio = impactCount.toFloat() / windowSize

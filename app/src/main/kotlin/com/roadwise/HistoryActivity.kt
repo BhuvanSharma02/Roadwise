@@ -20,12 +20,18 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.roadwise.databinding.ActivityHistoryBinding
 import com.roadwise.models.PotholeData
 import com.roadwise.utils.PotholeAdapter
 import com.roadwise.utils.PotholeRepository
+import com.roadwise.utils.SessionManager
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -41,7 +47,15 @@ class HistoryActivity : AppCompatActivity() {
         binding = ActivityHistoryBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.toolbar.setOnClickListener { finish() }
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
+        binding.toolbar.setOnClickListener { 
+            finish()
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
 
         setupRecyclerView()
 
@@ -49,13 +63,36 @@ class HistoryActivity : AppCompatActivity() {
             val potholes = PotholeRepository.getAllPotholes(this)
             generatePdf(potholes, "RoadWise_Full_Report")
         }
+
+        observeDataChanges()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshList()
+        PotholeRepository.fetchFromCloud(this) {}
+    }
+
+    private fun observeDataChanges() {
+        lifecycleScope.launch {
+            PotholeRepository.updates.collect {
+                refreshList()
+            }
+        }
     }
 
     private fun setupRecyclerView() {
-        val potholes = PotholeRepository.getAllPotholes(this)
+        val userEmail = SessionManager.getUserEmail(this)
+        val isAdmin = SessionManager.isAdmin(this)
+        
+        // Filter records: standard users only see their own, admins see everything
+        val allPotholes = PotholeRepository.getAllPotholes(this)
+        val potholes = if (isAdmin) allPotholes else allPotholes.filter { it.createdByEmail == userEmail }
         
         adapter = PotholeAdapter(
             potholes,
+            userEmail,
+            isAdmin,
             onItemClick = { pothole -> showPotholeDetail(pothole) },
             onDeleteClick = { pothole -> confirmDeleteRecord(pothole) }
         )
@@ -86,8 +123,8 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun formatCoords(data: PotholeData): String {
-        val lat = String.format("%.4f", Math.abs(data.location.latitude))
-        val lon = String.format("%.4f", Math.abs(data.location.longitude))
+        val lat = String.format(Locale.US, "%.4f", kotlin.math.abs(data.location.latitude))
+        val lon = String.format(Locale.US, "%.4f", kotlin.math.abs(data.location.longitude))
         val latDir = if (data.location.latitude >= 0) "N" else "S"
         val lonDir = if (data.location.longitude >= 0) "E" else "W"
         return "$lat° $latDir, $lon° $lonDir"
@@ -104,14 +141,18 @@ class HistoryActivity : AppCompatActivity() {
                     if (file.exists()) file.delete()
                 }
                 PotholeRepository.deletePothole(this, pothole.timestamp)
-                refreshList()
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun refreshList() {
-        val potholes = PotholeRepository.getAllPotholes(this)
+        val userEmail = SessionManager.getUserEmail(this)
+        val isAdmin = SessionManager.isAdmin(this)
+        
+        val allPotholes = PotholeRepository.getAllPotholes(this)
+        val potholes = if (isAdmin) allPotholes else allPotholes.filter { it.createdByEmail == userEmail }
+
         adapter.updateData(potholes)
         updateSummaryChips(potholes)
         updateEmptyState(potholes.isEmpty())

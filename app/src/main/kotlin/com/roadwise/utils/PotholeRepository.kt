@@ -9,14 +9,27 @@ import com.google.gson.reflect.TypeToken
 import com.roadwise.models.PotholeData
 import com.roadwise.sensors.RoadFeature
 import org.osmdroid.util.GeoPoint
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import java.io.File
 import java.lang.reflect.Type
+import java.util.Collections
 import kotlinx.coroutines.*
 
 object PotholeRepository {
     private const val PREFS_NAME = "pothole_prefs"
     private const val KEY_POTHOLES = "potholes"
+    private const val KEY_DELETED = "deleted_timestamps"
     private var cached: List<PotholeData>? = null
     private val firestore by lazy { FirebaseFirestore.getInstance() }
+    private val deletedTimestamps = Collections.synchronizedSet(mutableSetOf<Long>())
+
+    private val _updates = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val updates = _updates.asSharedFlow()
+
+    private fun notifyUpdated() {
+        _updates.tryEmit(Unit)
+    }
 
     private val gson = GsonBuilder()
         .registerTypeAdapter(GeoPoint::class.java, object : JsonSerializer<GeoPoint>, JsonDeserializer<GeoPoint> {
@@ -38,11 +51,15 @@ object PotholeRepository {
 
     fun savePothole(context: Context, pothole: PotholeData) {
         try {
+            val userEmail = SessionManager.getUserEmail(context)
+            val updatedPothole = if (pothole.createdByEmail.isBlank()) {
+                pothole.copy(createdByEmail = userEmail)
+            } else pothole
+
             val potholes = getAllPotholes(context).toMutableList()
-            potholes.add(0, pothole)
-            saveAll(context, potholes)
-            cached = potholes
-            pushToCloud(context, pothole)
+            potholes.add(0, updatedPothole)
+            saveAllInternal(context, potholes)
+            pushToCloud(context, updatedPothole)
         } catch (e: Exception) { Log.e("RoadWise-Repo", "Save failed", e) }
     }
 
@@ -69,7 +86,7 @@ object PotholeRepository {
                     "severity" to pothole.severity.name,
                     "timestamp" to pothole.timestamp,
                     "userId" to currentUser.uid,
-                    "email" to (currentUser.email ?: "")
+                    "createdByEmail" to (currentUser.email ?: "")
                 )
 
                 withTimeout(15000L) {
@@ -104,7 +121,7 @@ object PotholeRepository {
             "severity" to pothole.severity.name,
             "timestamp" to pothole.timestamp,
             "userId" to currentUser.uid,
-            "email" to (currentUser.email ?: "")
+            "createdByEmail" to (currentUser.email ?: "")
         )
         firestore.collection("potholes").add(data)
             .addOnFailureListener { e ->
@@ -113,6 +130,7 @@ object PotholeRepository {
     }
 
     fun fetchFromCloud(context: Context, onComplete: (List<PotholeData>) -> Unit) {
+        loadDeletedTimestamps(context)
         firestore.collection("potholes").orderBy("timestamp", Query.Direction.DESCENDING).limit(500).get()
             .addOnSuccessListener { result ->
                 val cloud = result.mapNotNull { doc ->
@@ -125,7 +143,9 @@ object PotholeRepository {
                             RoadFeature.valueOf(doc.getString("type")!!),
                             doc.getDouble("intensity")!!.toFloat(),
                             severity,
-                            doc.getLong("timestamp")!!
+                            doc.getLong("timestamp")!!,
+                            emptyList(),
+                            doc.getString("createdByEmail") ?: ""
                         )
                     } catch(e: Exception) { 
                         Log.e("RoadWise-Repo", "Failed to parse document ${doc.id}", e)
@@ -137,7 +157,9 @@ object PotholeRepository {
                 // If authenticated, sync local-only potholes (offline records) to the cloud
                 val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
                 if (currentUser != null) {
-                    val localOnly = local.filter { localItem -> cloud.none { it.timestamp == localItem.timestamp } }
+                    val localOnly = local.filter { localItem -> 
+                        localItem.timestamp !in deletedTimestamps && cloud.none { it.timestamp == localItem.timestamp } 
+                    }
                     if (localOnly.isNotEmpty()) {
                         CoroutineScope(Dispatchers.IO).launch {
                             for (pothole in localOnly) {
@@ -147,9 +169,21 @@ object PotholeRepository {
                     }
                 }
 
-                val combined = (local + cloud).distinctBy { it.timestamp }.sortedByDescending { it.timestamp }
+                val localMap = local.associateBy { it.timestamp }
+                val mergedCloud = cloud.map { cloudItem ->
+                    localMap[cloudItem.timestamp]?.let { localItem ->
+                        cloudItem.copy(imagePaths = localItem.imagePaths)
+                    } ?: cloudItem
+                }
+
+                val combined = (mergedCloud + local)
+                    .filter { it.timestamp !in deletedTimestamps }
+                    .distinctBy { it.timestamp }
+                    .sortedByDescending { it.timestamp }
+                
                 saveAll(context, combined)
                 cached = combined
+                notifyUpdated()
                 onComplete(combined)
             }
             .addOnFailureListener { e ->
@@ -159,16 +193,31 @@ object PotholeRepository {
 
     fun deletePothole(context: Context, timestamp: Long) {
         val potholes = getAllPotholes(context).toMutableList()
-        potholes.removeAll { it.timestamp == timestamp }
-        saveAllInternal(context, potholes)
+        val removed = potholes.removeAll { it.timestamp == timestamp }
+        
+        deletedTimestamps.add(timestamp)
+        saveDeletedTimestamps(context)
+        
+        if (removed) {
+            saveAllInternal(context, potholes)
+        } else {
+            notifyUpdated()
+        }
 
         val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
         if (currentUser != null) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val task = firestore.collection("potholes").whereEqualTo("timestamp", timestamp).get()
+                    Log.d("RoadWise-Repo", "Attempting to delete from cloud: $timestamp")
+                    val task = firestore.collection("potholes")
+                        .whereEqualTo("timestamp", timestamp)
+                        .get()
+                    
                     val result = com.google.android.gms.tasks.Tasks.await(task)
+                    Log.d("RoadWise-Repo", "Found ${result.size()} documents to delete for timestamp $timestamp")
+                    
                     for (doc in result.documents) {
+                        Log.d("RoadWise-Repo", "Deleting document: ${doc.id}")
                         com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
                     }
                 } catch (e: Exception) {
@@ -184,6 +233,9 @@ object PotholeRepository {
                 // 1. Remove from local storage
                 val localData = getAllPotholes(context).toMutableList()
                 val timestampsToRemove = targetPotholes.map { it.timestamp }.toSet()
+                deletedTimestamps.addAll(timestampsToRemove)
+                saveDeletedTimestamps(context)
+                
                 localData.removeAll { it.timestamp in timestampsToRemove }
                 saveAllInternal(context, localData)
 
@@ -213,6 +265,7 @@ object PotholeRepository {
     fun saveAllInternal(context: Context, potholes: List<PotholeData>) {
         saveAll(context, potholes)
         cached = potholes
+        notifyUpdated()
     }
 
     private fun saveAll(context: Context, potholes: List<PotholeData>) {
@@ -224,7 +277,8 @@ object PotholeRepository {
     }
 
     fun getAllPotholes(context: Context): List<PotholeData> {
-        cached?.let { return it }
+        loadDeletedTimestamps(context)
+        cached?.let { return it.filter { p -> p.timestamp !in deletedTimestamps } }
         return try {
             val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_POTHOLES, null) ?: return emptyList<PotholeData>().also { cached = it }
@@ -242,9 +296,14 @@ object PotholeRepository {
                     val type = RoadFeature.valueOf(obj.get("type").asString)
                     val intensity = obj.get("intensity").asFloat
                     val timestamp = if (obj.has("timestamp")) obj.get("timestamp").asLong else System.currentTimeMillis()
+                    
+                    // Skip if item is in deleted list
+                    if (timestamp in deletedTimestamps) continue
+                    
                     val severity = if (obj.has("severity")) Severity.valueOf(obj.get("severity").asString) else Severity.LOW
                     val paths = if (obj.has("imagePaths")) gson.fromJson<List<String>>(obj.get("imagePaths"), object : TypeToken<List<String>>() {}.type) else emptyList()
-                    result.add(PotholeData(loc, type, intensity, severity, timestamp, paths))
+                    val email = if (obj.has("createdByEmail")) obj.get("createdByEmail").asString else ""
+                    result.add(PotholeData(loc, type, intensity, severity, timestamp, paths, email))
                 } catch (e: Exception) { }
             }
             val sortedResult = result.sortedByDescending { it.timestamp }
@@ -253,19 +312,72 @@ object PotholeRepository {
         } catch (e: Exception) { emptyList() }
     }
 
+    private fun saveDeletedTimestamps(context: Context) {
+        val json = gson.toJson(deletedTimestamps.toList())
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_DELETED, json)
+            .apply()
+    }
+
+    private fun loadDeletedTimestamps(context: Context) {
+        if (deletedTimestamps.isNotEmpty()) return
+        try {
+            val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_DELETED, null) ?: return
+            val list = gson.fromJson<List<Long>>(json, object : TypeToken<List<Long>>() {}.type)
+            deletedTimestamps.addAll(list)
+        } catch (e: Exception) { }
+    }
+
     fun clearAll(context: Context) {
         val allPotholes = getAllPotholes(context)
         for (pothole in allPotholes) {
             for (path in pothole.imagePaths) {
-                try { java.io.File(path).delete() } catch (_: Exception) { }
+                try { File(path).delete() } catch (_: Exception) { }
             }
         }
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(KEY_POTHOLES).apply()
-        cached = emptyList()
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .remove(KEY_POTHOLES)
+            .remove(KEY_DELETED)
+            .apply()
+        deletedTimestamps.clear()
+        clearCache()
+        notifyUpdated()
+    }
+
+    fun clearCache() {
+        cached = null
     }
 
     fun getStorageSizeBytes(context: Context): Long {
-        val dir = context.getExternalFilesDir(null) ?: return 0L
-        return dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        var totalSize = 0L
+        
+        // 1. Check External Files Dir (where we'll eventually save high-res photos)
+        context.getExternalFilesDir(null)?.let { dir ->
+            totalSize += dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        }
+        
+        // 2. Check Internal Files Dir
+        context.filesDir?.let { dir ->
+            totalSize += dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        }
+
+        // 3. Check Cache Dir (OSM tiles, temporary reports)
+        context.cacheDir?.let { dir ->
+            totalSize += dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        }
+
+        // 4. Check Shared Prefs (where the pothole database actually lives)
+        try {
+            val sharedPrefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
+            if (sharedPrefsDir.exists() && sharedPrefsDir.isDirectory) {
+                totalSize += sharedPrefsDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+            }
+        } catch (e: Exception) {
+            // Silently ignore if shared_prefs access fails
+        }
+        
+        return totalSize
     }
 }
