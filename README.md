@@ -9,7 +9,7 @@ No camera. No extra hardware.
 ## What it does
 
 - Detects potholes and speed bumps in real time using the accelerometer
-- Classifies events using on-device FFT + ONNX inference (no internet required for detection)
+- Classifies events using on-device ONNX inference (no internet required for detection)
 - Tags each event with GPS location and a Low/Medium/High severity score
 - Syncs data to Firebase Firestore so multiple users share the same hazard map
 - Shows a live heatmap and A–F road quality grid on an OpenStreetMap view
@@ -30,7 +30,6 @@ India has ~9,438 pothole deaths in 2020–2024 (MoRTH data). Most road monitorin
 |------|-----|
 | Language | Kotlin, Android SDK (API 24+) |
 | ML Inference | ONNX Runtime for Android 1.26.0 |
-| Signal Processing | JTransforms 3.2 (FFT) |
 | Maps | osmdroid 6.1.20 (OpenStreetMap) |
 | Routing | OpenRouteService v2 API |
 | Geocoding | Photon by Komoot |
