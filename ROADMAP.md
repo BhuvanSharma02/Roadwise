@@ -1,48 +1,59 @@
 # RoadWise Implementation Roadmap
 
-This document outlines the step-by-step development process for the RoadWise pothole detection and mapping system.
+This document tracks the development phases of the RoadWise pothole detection and mapping system.
 
 ## Phase 1: Foundation & Project Setup ✅
-- [x] Initialize Android (Kotlin) project structure.
-- [x] Configure `build.gradle` with dependencies (CameraX, ML Kit, Maps SDK, Firebase).
-- [x] Define necessary permissions in `AndroidManifest.xml`.
-- [x] Create basic UI layout (Split screen: Camera View + Map View).
+- [x] Initialize Android (Kotlin) project structure
+- [x] Configure `build.gradle` with dependencies (ONNX Runtime, osmdroid, Firebase, Retrofit)
+- [x] Define necessary permissions in `AndroidManifest.xml`
+- [x] Firebase Authentication (email/password login)
+- [x] Splash → Login → Main activity flow with fade animations
 
-## Phase 2: Camera & Computer Vision (Real-time Detection) 🏗️
-- [ ] **CameraX Integration:** Implement `Preview` and `ImageAnalysis` use cases.
-- [ ] **Pothole Analyzer:** 
-    - [ ] Integrate ML Kit Object Detection.
-    - [ ] Create a custom `ImageAnalysis.Analyzer` to process frames.
-    - [ ] (Optional) Integrate a custom TFLite model specifically trained for potholes.
-- [ ] **Detection Overlay:** Draw bounding boxes on the camera feed to visualize detection in real-time.
+## Phase 2: Sensor-Based Detection ✅
+- [x] **BumpDetector:** Accelerometer Z-axis streaming at 100Hz
+- [x] **Signal Processing:** Low-pass Butterworth filter + windowing (256 samples, 50% overlap)
+- [x] **FFT Feature Extraction:** Peak frequency, spectral energy, kurtosis, ZCR, RMS
+- [x] **ONNX Inference:** On-device classification via `DetectionManager` → `Normal` / `Speed Breaker` / `Pothole`
+- [x] **Severity Scoring:** `RoadQualityScorer` assigns Low / Medium / High based on intensity and RMS
 
-## Phase 3: Sensor Fusion (Bump Detection)
-- [ ] **SensorManager Setup:** Access Accelerometer and Gyroscope data.
-- [ ] **Z-Axis Analysis:** Implement a "High-Pass Filter" or thresholding to detect sudden vertical jolts (the "Bump").
-- [ ] **Verification Logic:** 
-    - [ ] Correlate CV detection with Sensor detection.
-    - [ ] Only mark as "Verified Pothole" if both CV detects a hole AND sensors detect a bump within a short time window.
+## Phase 3: Location & Data Persistence ✅
+- [x] **GPS Tagging:** Fused Location Provider captures coordinates at event detection time
+- [x] **Firebase Firestore:** Cloud sync of pothole events with offline-first local storage
+- [x] **Session Tracking:** `SessionManager` accumulates GPS distance per drive session
+- [x] **Multi-user Support:** Admin vs standard user role separation in data views
 
-## Phase 4: Location & Data Persistence
-- [ ] **Location Tracking:** Implement `FusedLocationProviderClient` for high-accuracy GPS.
-- [ ] **Local Storage:** Use Room Database to cache detected potholes when offline.
-- [ ] **Cloud Sync:** 
-    - [ ] Setup Firebase Firestore.
-    - [ ] Upload "Verified Pothole" data (Lat/Lng, Intensity, Timestamp).
+## Phase 4: Background Monitoring ✅
+- [x] **Activity Recognition:** `DrivingReceiver` + Google Activity Recognition API auto-starts sensing when in vehicle
+- [x] **Foreground Service:** `DriveGuardService` keeps detection active while app is backgrounded
+- [x] **Boot Receiver:** `BootReceiver` re-registers activity monitoring after device reboot
+- [x] **Battery Awareness:** Adaptive sampling rates; background service respects Doze mode
 
-## Phase 5: Mapping & Heatmap Visualization
-- [ ] **Google Maps Integration:** Display user's current location.
-- [ ] **Heatmap Layer:** 
-    - [ ] Fetch pothole data from Firestore.
-    - [ ] Use `Google Maps Utility Library` to render a color-intensity heatmap.
-- [ ] **Marker Management:** Add custom markers for highly dangerous potholes.
+## Phase 5: Mapping & Heatmap Visualization ✅
+- [x] **osmdroid Integration:** Offline-capable OpenStreetMap rendering
+- [x] **HeatmapOverlay:** Custom tile overlay with radial glow per pothole cluster
+- [x] **RoadGrade Clusters:** Segments graded A–F; critical clusters get map markers
+- [x] **Overview Dashboard:** Admin view with severity filters, hotspot list, resolve action
 
-## Phase 6: Early Warning System
-- [ ] **Proximity Alerts:** Implement logic to check user's distance from the nearest pothole cluster.
-- [ ] **UI/Audio Warnings:** Provide visual/audible alerts ("Caution: Bad Road Ahead") when approaching a high-intensity area.
-- [ ] **Background Execution:** Implement a `Foreground Service` to keep detection and warnings active while the app is in the background.
+## Phase 6: Routing & Route Analysis ✅
+- [x] **OpenRouteService:** Turn-by-turn route calculation via Retrofit API
+- [x] **Photon Geocoding:** Address search and reverse geocoding
+- [x] **Route Risk Scoring:** Pothole exposure per route displayed before navigation
+- [x] **Time Estimation:** Dynamic hours/minutes display based on journey duration
 
-## Phase 7: Optimization & Polishing
-- [ ] **Battery Optimization:** Fine-tune sensor sampling rates and GPS updates.
-- [ ] **Sensitivity Controls:** Allow users to adjust CV and Sensor sensitivity levels.
-- [ ] **UI/UX Enhancements:** Dark mode support, smooth animations, and dashboard-friendly UI.
+## Phase 7: User Features ✅
+- [x] **Drive History:** Per-session log with pothole/bump counts, PDF export
+- [x] **CSV Export:** Analysis report shareable from Overview screen
+- [x] **Account Screen:** User profile, stats, sign-out
+- [x] **Reward Points:** `SessionManager` accumulates distance-based points; `RedeemActivity` for redemption
+
+## Phase 8: Polish & Optimization ✅
+- [x] **Dark Theme:** Glassmorphism UI with neon accents throughout
+- [x] **Micro-animations:** Fade-in/out transitions between screens
+- [x] **Sensitivity Controls:** Adjustable detection thresholds in Settings
+- [x] **Safety Alerts:** `SafetyAlertManager` shows non-intrusive in-app and notification alerts
+
+## Future / Planned
+- [ ] **Pothole-Aware Routing:** Actively avoid high-density pothole zones in route planning
+- [ ] **Heatmap Server Tiles:** Pre-render server-side tiles for faster map load
+- [ ] **Reward Redemption:** Live integration with UPI/voucher partners
+- [ ] **Municipal API:** Push verified hotspot reports directly to local civic portals

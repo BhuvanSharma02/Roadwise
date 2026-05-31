@@ -10,6 +10,5 @@ data class PotholeData(
     val intensity: Float,
     val severity: Severity = Severity.LOW,
     val timestamp: Long = System.currentTimeMillis(),
-    val imagePaths: List<String> = emptyList(),
     val createdByEmail: String = ""
 )

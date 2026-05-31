@@ -145,31 +145,7 @@
         android:layout_marginHorizontal="24dp"
         android:background="@color/glass_border" />
 
-    <!-- ── PHOTOS ── -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="10dp"
-        android:text="CAPTURED IMAGES"
-        android:textColor="@color/text_low"
-        android:textSize="9sp"
-        android:fontFamily="sans-serif-medium"
-        android:letterSpacing="0.15" />
 
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="24dp"
-        android:scrollbars="none"
-        android:clipToPadding="false">
-        <LinearLayout
-            android:id="@+id/photosContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
 
     <!-- ── ACTIONS ── -->
     <com.google.android.material.button.MaterialButton

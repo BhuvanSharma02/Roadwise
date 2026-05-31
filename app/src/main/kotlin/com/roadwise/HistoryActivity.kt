@@ -1,21 +1,12 @@
 package com.roadwise
 
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.view.LayoutInflater
 import android.view.View
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -135,11 +126,6 @@ class HistoryActivity : AppCompatActivity() {
             .setTitle("Delete Record")
             .setMessage("Are you sure you want to delete this detection?")
             .setPositiveButton("Delete") { _, _ ->
-                // Delete actual image files first
-                pothole.imagePaths?.forEach { path ->
-                    val file = File(path)
-                    if (file.exists()) file.delete()
-                }
                 PotholeRepository.deletePothole(this, pothole.timestamp)
             }
             .setNegativeButton("Cancel", null)
@@ -160,13 +146,12 @@ class HistoryActivity : AppCompatActivity() {
 
     private fun showPotholeDetail(pothole: PotholeData) {
         val dialog = BottomSheetDialog(this)
-        val view = LayoutInflater.from(this).inflate(R.layout.dialog_pothole_detail, null)
-        
-        val tvType = view.findViewById<TextView>(R.id.tvDetailType)
-        val tvLocation = view.findViewById<TextView>(R.id.tvDetailLocation)
-        val tvDateTime = view.findViewById<TextView>(R.id.tvDetailDateTime)
-        val tvIntensity = view.findViewById<TextView>(R.id.tvIntensityValue)
-        val photosContainer = view.findViewById<LinearLayout>(R.id.photosContainer)
+        val view = layoutInflater.inflate(R.layout.dialog_pothole_detail, null)
+
+        val tvType = view.findViewById<android.widget.TextView>(R.id.tvDetailType)
+        val tvLocation = view.findViewById<android.widget.TextView>(R.id.tvDetailLocation)
+        val tvDateTime = view.findViewById<android.widget.TextView>(R.id.tvDetailDateTime)
+        val tvIntensity = view.findViewById<android.widget.TextView>(R.id.tvIntensityValue)
         val btnExport = view.findViewById<View>(R.id.btnExportSingle)
         val btnViewOnMap = view.findViewById<View>(R.id.btnViewOnMap)
 
@@ -175,8 +160,6 @@ class HistoryActivity : AppCompatActivity() {
         val sdf = SimpleDateFormat("MMM dd, yyyy · HH:mm", Locale.getDefault())
         tvDateTime.text = sdf.format(Date(pothole.timestamp))
         tvIntensity.text = String.format("%.1fg", Math.abs(pothole.intensity))
-
-        renderPhotos(pothole, photosContainer)
 
         btnExport.setOnClickListener {
             generatePdf(listOf(pothole), "RoadWise_Pothole_${pothole.timestamp}")
@@ -195,56 +178,6 @@ class HistoryActivity : AppCompatActivity() {
 
         dialog.setContentView(view)
         dialog.show()
-    }
-
-    private fun renderPhotos(pothole: PotholeData, container: LinearLayout) {
-        container.removeAllViews()
-        val paths = pothole.imagePaths
-        if (paths == null || paths.isEmpty()) {
-            val tv = TextView(this)
-            tv.text = "No images captured"
-            tv.setTextColor(Color.GRAY)
-            container.addView(tv)
-            return
-        }
-
-        paths.forEach { path ->
-            val photoView = LayoutInflater.from(this).inflate(R.layout.item_burst_photo, container, false)
-            val iv = photoView.findViewById<ImageView>(R.id.ivBurst)
-            val btnDel = photoView.findViewById<ImageButton>(R.id.btnDeletePhoto)
-
-            val file = File(path)
-            if (file.exists()) {
-                // OOM-safe loading: sample down to max 200px
-                val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeFile(path, opts)
-                opts.inSampleSize = maxOf(1, minOf(opts.outWidth, opts.outHeight) / 200)
-                opts.inJustDecodeBounds = false
-                val bitmap = BitmapFactory.decodeFile(path, opts)
-                iv.setImageBitmap(bitmap)
-                
-                btnDel.setOnClickListener {
-                    file.delete()
-                    val newPaths = paths.toMutableList()
-                    newPaths.remove(path)
-                    // Update repository with new list of paths
-                    updatePotholeImages(pothole, newPaths)
-                    renderPhotos(pothole.copy(imagePaths = newPaths), container)
-                    refreshList() // Refresh main list to update thumbnail
-                }
-                container.addView(photoView)
-            }
-        }
-    }
-
-    private fun updatePotholeImages(pothole: PotholeData, newPaths: List<String>) {
-        val all = PotholeRepository.getAllPotholes(this).toMutableList()
-        val index = all.indexOfFirst { it.timestamp == pothole.timestamp }
-        if (index != -1) {
-            all[index] = all[index].copy(imagePaths = newPaths)
-            // Need a way to save full list in repository
-            PotholeRepository.saveAllInternal(this, all)
-        }
     }
 
     private fun generatePdf(potholes: List<PotholeData>, baseFileName: String) {
@@ -276,22 +209,9 @@ class HistoryActivity : AppCompatActivity() {
                 canvas.drawText("Loc: ${pothole.location.latitude}, ${pothole.location.longitude}", 50f, y, textPaint)
                 y += 20f
                 canvas.drawText("Date: ${sdf.format(Date(pothole.timestamp))}", 50f, y, textPaint)
+                y += 20f
+                canvas.drawText("Severity: ${pothole.severity.name}", 50f, y, textPaint)
                 y += 30f
-                
-                var xOffset = 50f
-                pothole.imagePaths?.forEach { path ->
-                    val file = File(path)
-                    if (file.exists() && y < 700f) {
-                        val bitmap = BitmapFactory.decodeFile(path)
-                        if (bitmap != null) {
-                            val scaled = Bitmap.createScaledBitmap(bitmap, 120, 90, true)
-                            canvas.drawBitmap(scaled, xOffset, y, null)
-                            xOffset += 130f
-                            if (xOffset > 450f) { xOffset = 50f; y += 100f }
-                        }
-                    }
-                }
-                if (xOffset != 50f) y += 100f
 
                 canvas.drawLine(50f, y, 545f, y, textPaint)
                 y += 30f
